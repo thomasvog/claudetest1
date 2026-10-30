@@ -9,13 +9,24 @@ import secrets
 import unicodedata
 from datetime import date, datetime
 from functools import wraps
+from pathlib import Path
+from xml.sax.saxutils import escape
 
 import psycopg
 from flask import Flask, abort, g, jsonify, request, send_file, session
 from flask.json.provider import DefaultJSONProvider
 from openpyxl import Workbook, load_workbook
-from PIL import Image, ImageOps
+from PIL import Image, ImageChops, ImageDraw, ImageOps
 from psycopg.rows import dict_row
+from reportlab.graphics.charts.barcharts import HorizontalBarChart, VerticalBarChart
+from reportlab.graphics.charts.piecharts import Pie
+from reportlab.graphics.shapes import Drawing
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_LEFT, TA_RIGHT
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.lib.units import mm
+from reportlab.platypus import HRFlowable, Image as PDFImage, LongTable, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 from werkzeug.security import check_password_hash, generate_password_hash
 
 
@@ -51,6 +62,12 @@ CRIT = ["alta", "media", "baja"]
 PROT = ["Ex d", "Ex e", "Ex i", "Ex p", "Ex n", "Ex m", "Ex o", "Ex q", "Ex t", "Otro / N.A."]
 ROLES = {"tecnico": 1, "supervisor": 2, "admin": 3}
 ROLE_LABEL = {"tecnico": "Técnico", "supervisor": "Supervisor", "admin": "Administrador"}
+PDF_NAVY = colors.HexColor("#111A30")
+PDF_ORANGE = colors.HexColor("#FF9900")
+PDF_RED = colors.HexColor("#F0004F")
+PDF_GREEN = colors.HexColor("#10C995")
+PDF_MUTED = colors.HexColor("#64748B")
+PDF_LINE = colors.HexColor("#D8DEE8")
 
 SCHEMA = [
     "CREATE TABLE IF NOT EXISTS users(id SERIAL PRIMARY KEY, username TEXT UNIQUE NOT NULL, name TEXT NOT NULL, pw TEXT NOT NULL, role TEXT NOT NULL)",
@@ -731,6 +748,458 @@ def image_response(table, pid):
 @need()
 def photo_file(pid):
     return image_response("photos", pid)
+
+
+def pdf_styles():
+    return {
+        "title": ParagraphStyle("ReportTitle", fontName="Helvetica-Bold", fontSize=17, leading=21, textColor=PDF_NAVY, spaceAfter=2 * mm),
+        "section": ParagraphStyle("ReportSection", fontName="Helvetica-Bold", fontSize=10, leading=13, textColor=PDF_NAVY, spaceBefore=3 * mm, spaceAfter=1.5 * mm),
+        "record": ParagraphStyle("ReportRecord", fontName="Helvetica-Bold", fontSize=10, leading=13, textColor=PDF_NAVY, spaceBefore=2 * mm, spaceAfter=1.5 * mm),
+        "body": ParagraphStyle("ReportBody", fontName="Helvetica", fontSize=8.5, leading=12, textColor=colors.HexColor("#202A3A"), spaceAfter=1.5 * mm),
+        "small": ParagraphStyle("ReportSmall", fontName="Helvetica", fontSize=7.5, leading=10, textColor=colors.HexColor("#202A3A")),
+        "muted": ParagraphStyle("ReportMuted", fontName="Helvetica", fontSize=8, leading=11, textColor=PDF_MUTED),
+        "table_head": ParagraphStyle("ReportTableHead", fontName="Helvetica-Bold", fontSize=7.5, leading=9, textColor=colors.white),
+        "table": ParagraphStyle("ReportTable", fontName="Helvetica", fontSize=7.2, leading=9, textColor=colors.HexColor("#202A3A")),
+        "brand": ParagraphStyle("ReportBrand", fontName="Helvetica-Bold", fontSize=9, leading=12, textColor=PDF_NAVY, alignment=TA_RIGHT),
+    }
+
+
+def pdf_value(value):
+    if value is None or value == "":
+        return "No registrado"
+    if isinstance(value, (date, datetime)):
+        return value.strftime("%d/%m/%Y")
+    return str(value)
+
+
+def pdf_paragraph(value, style):
+    text = escape(pdf_value(value)).replace("\r\n", "\n").replace("\n", "<br/>")
+    return Paragraph(text, style)
+
+
+def pdf_labeled(label, value, style):
+    return Paragraph("<b>%s:</b> %s" % (escape(label), escape(pdf_value(value)).replace("\r\n", "\n").replace("\n", "<br/>")), style)
+
+
+def pdf_generated_at():
+    return datetime.now().astimezone().strftime("%d/%m/%Y %H:%M %Z")
+
+
+def pdf_page(canvas, doc, generated):
+    width, height = doc.pagesize
+    canvas.saveState()
+    canvas.setFillColor(PDF_NAVY)
+    canvas.rect(0, height - 14 * mm, width, 14 * mm, fill=1, stroke=0)
+    canvas.setFillColor(colors.white)
+    canvas.setFont("Helvetica-Bold", 8)
+    canvas.drawString(16 * mm, height - 9 * mm, "PETROCUYO HAZLOC")
+    canvas.setFillColor(PDF_ORANGE)
+    canvas.rect(0, height - 14.5 * mm, width, 0.8 * mm, fill=1, stroke=0)
+    canvas.setStrokeColor(PDF_LINE)
+    canvas.setLineWidth(0.5)
+    canvas.line(16 * mm, 14 * mm, width - 16 * mm, 14 * mm)
+    canvas.setFillColor(PDF_MUTED)
+    canvas.setFont("Helvetica", 7)
+    canvas.drawString(16 * mm, 9 * mm, "Sistema de Inspecciones HAZLOC | Generado: " + generated)
+    canvas.drawRightString(width - 16 * mm, 9 * mm, "Página %s" % doc.page)
+    canvas.restoreState()
+
+
+def pdf_logo_data(path):
+    with Image.open(path) as source:
+        logo = source.convert("RGBA")
+    mask = Image.new("L", logo.size, 0)
+    radius = max(2, min(logo.size) // 20)
+    ImageDraw.Draw(mask).rounded_rectangle((0, 0, logo.width - 1, logo.height - 1), radius=radius, fill=255)
+    logo.putalpha(ImageChops.multiply(logo.getchannel("A"), mask))
+    data = io.BytesIO()
+    logo.save(data, format="PNG")
+    data.seek(0)
+    return data
+
+
+def make_report_pdf(title, content, wide=False, generated=None):
+    generated = generated or pdf_generated_at()
+    pagesize = landscape(A4) if wide else A4
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=pagesize, leftMargin=16 * mm, rightMargin=16 * mm,
+                            topMargin=21 * mm, bottomMargin=19 * mm, title=title, author="PETROCUYO HAZLOC")
+    styles = pdf_styles()
+    logo_path = Path(__file__).resolve().parent.parent / "public" / "logo.png"
+    if logo_path.is_file():
+        logo = PDFImage(pdf_logo_data(logo_path), width=42 * mm, height=17 * mm, kind="proportional")
+    else:
+        logo = pdf_paragraph("PETROCUYO HAZLOC", styles["brand"])
+    available = pagesize[0] - doc.leftMargin - doc.rightMargin
+    header = Table([[logo, pdf_paragraph("PETROCUYO HAZLOC", styles["brand"])]], colWidths=[48 * mm, available - 48 * mm])
+    header.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("ALIGN", (1, 0), (1, 0), "RIGHT"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+        ("TOPPADDING", (0, 0), (-1, -1), 0),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+    ]))
+    story = [header, Spacer(1, 5 * mm), pdf_paragraph(title, styles["title"]),
+             pdf_labeled("Fecha y hora de generación", generated, styles["muted"]),
+             HRFlowable(width="100%", thickness=1.2, color=PDF_ORANGE, spaceBefore=2 * mm, spaceAfter=4 * mm)] + content
+    draw = lambda canvas, page: pdf_page(canvas, page, generated)
+    doc.build(story, onFirstPage=draw, onLaterPages=draw)
+    buf.seek(0)
+    return buf
+
+
+def pdf_download(buf, filename):
+    response = send_file(buf, mimetype="application/pdf", as_attachment=True, download_name=filename)
+    response.headers["Cache-Control"] = "private, no-store"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    return response
+
+
+REPORT_FINDING_SELECT = (
+    "SELECT f.*, COALESCE(l.name, 'No registrado') area, "
+    "COALESCE(u.name, f.inspector_name, 'Usuario eliminado') inspector, "
+    "CASE WHEN f.closed_at IS NOT NULL THEN COALESCE(c.name, f.closer_name, 'Usuario eliminado') END closer "
+    "FROM findings f LEFT JOIN locations l ON l.id=f.location_id "
+    "LEFT JOIN users u ON u.id=f.inspector_id LEFT JOIN users c ON c.id=f.closed_by"
+)
+
+
+def report_snapshot(reader):
+    with db().transaction():
+        db().execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY")
+        return reader()
+
+
+def report_findings_by_status(status):
+    order = ("CASE f.criticality WHEN 'alta' THEN 0 WHEN 'media' THEN 1 WHEN 'baja' THEN 2 ELSE 3 END, "
+             "f.inspected_at ASC, f.id ASC") if status == "pendiente" else "f.closed_at DESC NULLS LAST, f.id DESC"
+    result, offset, batch_size = [], 0, 500
+    while True:
+        batch = rows(REPORT_FINDING_SELECT + " WHERE f.status=%s ORDER BY " + order + " LIMIT %s OFFSET %s",
+                     status, batch_size, offset)
+        result.extend(batch)
+        if len(batch) < batch_size:
+            return result
+        offset += batch_size
+
+
+def report_code(f):
+    tag = str(f.get("tag") or "").strip()
+    return "%s (ID %s)" % (tag, f["id"]) if tag else "Hallazgo #%s" % f["id"]
+
+
+def report_age_days(f, end=None):
+    inspected = f.get("inspected_at")
+    if not inspected:
+        return None
+    if isinstance(inspected, datetime):
+        inspected = inspected.date()
+    if isinstance(end, datetime):
+        end = end.date()
+    return ((end or date.today()) - inspected).days
+
+
+def report_record_story(f, status, styles, content_width):
+    story = [pdf_paragraph(report_code(f), styles["record"])]
+    criticality = str(f.get("criticality") or "").capitalize() or "No registrado"
+    metadata = [
+        [pdf_labeled("Fecha de detección", f.get("inspected_at"), styles["small"]),
+         pdf_labeled("Área o sector", f.get("area"), styles["small"])],
+        [pdf_labeled("Criticidad", criticality, styles["small"]),
+         pdf_labeled("Estado", status.capitalize(), styles["small"])],
+    ]
+    if status == "pendiente":
+        age = report_age_days(f)
+        metadata.append([pdf_labeled("Antigüedad", "%s días" % age if age is not None else None, styles["small"]),
+                         pdf_labeled("Responsable asignado", None, styles["small"])])
+    else:
+        days = report_age_days(f, f.get("closed_at"))
+        metadata.extend([
+            [pdf_labeled("Fecha de solución", f.get("closed_at"), styles["small"]),
+             pdf_labeled("Responsable de solución", f.get("closer"), styles["small"])],
+            [pdf_labeled("Tiempo hasta solución", "%s días" % days if days is not None else None, styles["small"]),
+             pdf_labeled("Usuario que registró", f.get("inspector"), styles["small"])],
+        ])
+    table = Table(metadata, colWidths=[content_width / 2, content_width / 2])
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F3F5F8")),
+        ("BOX", (0, 0), (-1, -1), 0.4, PDF_LINE),
+        ("INNERGRID", (0, 0), (-1, -1), 0.3, PDF_LINE),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 5), ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+        ("TOPPADDING", (0, 0), (-1, -1), 4), ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+    ]))
+    story.extend([table, Spacer(1, 1.5 * mm), pdf_labeled("Descripción", f.get("description"), styles["body"])])
+    if status == "pendiente":
+        story.append(pdf_labeled("Riesgo identificado", None, styles["body"]))
+    else:
+        story.append(pdf_labeled("Acción correctiva", f.get("resolution"), styles["body"]))
+    story.extend([pdf_labeled("Observaciones", None, styles["body"]),
+                  HRFlowable(width="100%", thickness=0.4, color=PDF_LINE, spaceBefore=1 * mm, spaceAfter=2 * mm)])
+    return story
+
+
+def report_list_pdf(status, title, filename):
+    def read():
+        return report_findings_by_status(status)
+
+    records = report_snapshot(read)
+    generated = pdf_generated_at()
+    styles = pdf_styles()
+    width = landscape(A4)[0] - 32 * mm
+    content = [pdf_labeled("Cantidad total de hallazgos", len(records), styles["body"]), Spacer(1, 2 * mm)]
+    if records:
+        for finding in records:
+            content.extend(report_record_story(finding, status, styles, width))
+    else:
+        content.append(pdf_paragraph("No hay hallazgos registrados para este estado.", styles["body"]))
+    return pdf_download(make_report_pdf(title, content, wide=True, generated=generated), filename)
+
+
+@app.get("/api/reports/findings/<int:fid>.pdf")
+@need()
+def finding_report_pdf(fid):
+    def read():
+        finding = one(REPORT_FINDING_SELECT + " WHERE f.id=%s", fid)
+        photos = rows("SELECT id, kind, data FROM photos WHERE finding_id=%s ORDER BY CASE kind WHEN 'antes' THEN 0 ELSE 1 END, id", fid)
+        return finding, photos
+
+    finding, photos = report_snapshot(read)
+    if finding["status"] != "solucionado":
+        return err("Solo se pueden generar informes de hallazgos solucionados.", 409)
+    generated = pdf_generated_at()
+    styles = pdf_styles()
+    story = [pdf_labeled("Código identificador", report_code(finding), styles["body"]),
+             pdf_labeled("Fecha de detección", finding.get("inspected_at"), styles["body"]),
+             pdf_labeled("Fecha de solución", finding.get("closed_at"), styles["body"]),
+             pdf_labeled("Área o sector", finding.get("area"), styles["body"]),
+             pdf_labeled("Descripción del hallazgo", finding.get("description"), styles["body"]),
+             pdf_labeled("Nivel de criticidad", str(finding.get("criticality") or "").capitalize(), styles["body"]),
+             pdf_labeled("Riesgo identificado", None, styles["body"]),
+             pdf_labeled("Acción correctiva implementada", finding.get("resolution"), styles["body"]),
+             pdf_labeled("Responsable de la solución", finding.get("closer"), styles["body"]),
+             pdf_labeled("Usuario que registró el hallazgo", finding.get("inspector"), styles["body"]),
+             pdf_labeled("Observaciones y comentarios", None, styles["body"]),
+             pdf_labeled("Estado final", "SOLUCIONADO", styles["body"]),
+             Paragraph("Evidencias fotográficas", styles["section"])]
+    if not photos:
+        story.append(pdf_paragraph("No registrado", styles["body"]))
+    for photo in photos:
+        story.append(pdf_labeled("Estado", "Antes" if photo["kind"] == "antes" else "Después", styles["small"]))
+        try:
+            image_data = bytes(photo["data"])
+            with Image.open(io.BytesIO(image_data)) as image:
+                original_width, original_height = image.size
+            scale = min((165 * mm) / original_width, (105 * mm) / original_height, 1)
+            story.extend([PDFImage(io.BytesIO(image_data), width=original_width * scale, height=original_height * scale), Spacer(1, 2 * mm)])
+        except (OSError, ValueError, TypeError):
+            story.append(pdf_paragraph("Evidencia no disponible.", styles["muted"]))
+    filename = "hallazgo-%s-solucionado.pdf" % fid
+    return pdf_download(make_report_pdf("INFORME DE HALLAZGO SOLUCIONADO", story, generated=generated), filename)
+
+
+@app.get("/api/reports/pending.pdf")
+@need("supervisor")
+def pending_report_pdf():
+    return report_list_pdf("pendiente", "INFORME DE HALLAZGOS PENDIENTES", "hallazgos-pendientes.pdf")
+
+
+@app.get("/api/reports/solved.pdf")
+@need("supervisor")
+def solved_report_pdf():
+    return report_list_pdf("solucionado", "INFORME DE HALLAZGOS SOLUCIONADOS", "hallazgos-solucionados.pdf")
+
+
+def report_status_chart(pending, solved):
+    values = [int(pending), int(solved)]
+    drawing = Drawing(165 * mm, 72 * mm)
+    chart = VerticalBarChart()
+    chart.x, chart.y, chart.width, chart.height = 28, 17, 430, 155
+    chart.data = [[values[0], 0], [0, values[1]]]
+    chart.categoryAxis.categoryNames = ["Pendientes", "Solucionados"]
+    chart.categoryAxis.labels.fontName = "Helvetica"
+    chart.categoryAxis.labels.fontSize = 8
+    chart.valueAxis.valueMin = 0
+    maximum = max(values) if values else 0
+    chart.valueAxis.valueMax = max(1, maximum)
+    chart.valueAxis.valueStep = max(1, (maximum + 3) // 4)
+    chart.valueAxis.labels.fontName = "Helvetica"
+    chart.valueAxis.labels.fontSize = 7
+    chart.bars[0].fillColor = PDF_ORANGE
+    chart.bars[0].strokeColor = PDF_ORANGE
+    chart.bars[1].fillColor = PDF_GREEN
+    chart.bars[1].strokeColor = PDF_GREEN
+    drawing.add(chart)
+    return drawing
+
+
+def report_criticality_chart(labels, values):
+    items = [(label, int(value)) for label, value in zip(labels, values) if int(value) > 0]
+    if not items:
+        return None
+    drawing = Drawing(165 * mm, 75 * mm)
+    chart = Pie()
+    chart.x, chart.y, chart.width, chart.height = 12, 4, 105, 65
+    chart.data = [value for _, value in items]
+    chart.labels = ["%s: %s" % (label, value) for label, value in items]
+    chart.slices.strokeColor = colors.white
+    palette = {"alta": PDF_RED, "media": colors.HexColor("#F5B942"), "baja": PDF_GREEN}
+    for index, (label, _) in enumerate(items):
+        chart.slices[index].fillColor = palette.get(label.lower(), PDF_MUTED)
+    drawing.add(chart)
+    return drawing
+
+
+def report_area_chart(areas):
+    if not areas:
+        return None
+    height = max(50 * mm, min(115 * mm, len(areas) * 9 * mm))
+    drawing = Drawing(165 * mm, height)
+    chart = HorizontalBarChart()
+    chart.x, chart.y, chart.width, chart.height = 62, 8, 365, height - 18
+    chart.data = [[int(area["count"]) for area in areas]]
+    chart.categoryAxis.categoryNames = [pdf_value(area["area"]) for area in areas]
+    chart.categoryAxis.labels.fontName = "Helvetica"
+    chart.categoryAxis.labels.fontSize = 7
+    chart.valueAxis.valueMin = 0
+    maximum = max(int(area["count"]) for area in areas)
+    chart.valueAxis.valueMax = max(1, maximum)
+    chart.valueAxis.valueStep = max(1, (maximum + 3) // 4)
+    chart.valueAxis.labels.fontName = "Helvetica"
+    chart.valueAxis.labels.fontSize = 7
+    chart.bars[0].fillColor = PDF_ORANGE
+    drawing.add(chart)
+    return drawing
+
+
+def report_month_chart(months):
+    present = [month for month in months if month[1] > 0]
+    if len(present) < 2:
+        return None
+    drawing = Drawing(165 * mm, 72 * mm)
+    chart = VerticalBarChart()
+    chart.x, chart.y, chart.width, chart.height = 28, 17, 430, 155
+    chart.data = [[count for _, count in months]]
+    chart.categoryAxis.categoryNames = [label for label, _ in months]
+    chart.categoryAxis.labels.fontName = "Helvetica"
+    chart.categoryAxis.labels.fontSize = 6
+    chart.categoryAxis.labels.angle = 45
+    chart.valueAxis.valueMin = 0
+    maximum = max(count for _, count in months)
+    chart.valueAxis.valueMax = max(1, maximum)
+    chart.valueAxis.valueStep = max(1, (maximum + 3) // 4)
+    chart.valueAxis.labels.fontName = "Helvetica"
+    chart.valueAxis.labels.fontSize = 7
+    chart.bars[0].fillColor = PDF_ORANGE
+    drawing.add(chart)
+    return drawing
+
+
+def report_kpi_data():
+    summary = one("SELECT COUNT(*) total, COUNT(*) FILTER (WHERE status='pendiente') pending, "
+                  "COUNT(*) FILTER (WHERE status='solucionado') solved, "
+                  "COUNT(*) FILTER (WHERE status='pendiente' AND CURRENT_DATE - inspected_at > 30) overdue, "
+                  "AVG(closed_at - inspected_at) FILTER (WHERE status='solucionado' AND closed_at IS NOT NULL) average_days "
+                  "FROM findings")
+    criticality = rows("SELECT criticality, COUNT(*) count FROM findings GROUP BY criticality "
+                       "ORDER BY CASE criticality WHEN 'alta' THEN 0 WHEN 'media' THEN 1 WHEN 'baja' THEN 2 ELSE 3 END")
+    areas = rows("SELECT COALESCE(l.name, 'No registrado') area, COUNT(*) count FROM findings f "
+                 "LEFT JOIN locations l ON l.id=f.location_id GROUP BY l.name ORDER BY count DESC, area")
+    month_rows = rows("SELECT to_char(date_trunc('month', inspected_at), 'YYYY-MM') month, COUNT(*) count FROM findings "
+                      "WHERE inspected_at >= date_trunc('month', CURRENT_DATE) - INTERVAL '11 months' "
+                      "GROUP BY 1 ORDER BY 1")
+    counts = {str(item["criticality"] or "No registrado").lower(): int(item["count"]) for item in criticality}
+    monthly = {item["month"]: int(item["count"]) for item in month_rows}
+    current = date.today().replace(day=1)
+    labels = []
+    for _ in range(12):
+        labels.insert(0, current.strftime("%Y-%m"))
+        current = current.replace(year=current.year - (current.month == 1), month=12 if current.month == 1 else current.month - 1)
+    months = [(label, monthly.get(label, 0)) for label in labels]
+    return summary, counts, areas, months, criticality
+
+
+def executive_report_content(data):
+    summary, critical_counts, areas, months, critical_rows = data
+    styles = pdf_styles()
+    total = int(summary["total"])
+    pending = int(summary["pending"])
+    solved = int(summary["solved"])
+    percentage = (solved / total * 100) if total else None
+    average = summary["average_days"]
+    if average is not None:
+        average = float(average)
+    kpis = [
+        ("Total de inspecciones realizadas", "No registrado", "El esquema no registra inspecciones independientes."),
+        ("Total de hallazgos", total, "COUNT(*) sobre findings."),
+        ("Hallazgos pendientes", pending, "COUNT(*) donde status = pendiente."),
+        ("Hallazgos solucionados", solved, "COUNT(*) donde status = solucionado."),
+        ("Porcentaje de resolución", "%.1f%%" % percentage if percentage is not None else "No registrado", "Solucionados / total de hallazgos x 100."),
+        ("Criticidad alta", critical_counts.get("alta", 0), "Hallazgos de criticidad alta, cualquiera sea su estado."),
+        ("Criticidad media", critical_counts.get("media", 0), "Hallazgos de criticidad media, cualquiera sea su estado."),
+        ("Criticidad baja", critical_counts.get("baja", 0), "Hallazgos de criticidad baja, cualquiera sea su estado."),
+        ("Pendientes con más de 30 días", int(summary["overdue"]), "Pendientes con CURRENT_DATE - inspected_at > 30."),
+        ("Tiempo promedio de resolución", "%.1f días" % average if average is not None else "No registrado", "AVG(closed_at - inspected_at) para solucionados con ambas fechas."),
+    ]
+    table_data = [[pdf_paragraph("Indicador", styles["table_head"]), pdf_paragraph("Resultado", styles["table_head"]),
+                   pdf_paragraph("Fórmula / alcance", styles["table_head"])]]
+    for label, value, formula in kpis:
+        table_data.append([pdf_paragraph(label, styles["table"]), pdf_paragraph(value, styles["table"]), pdf_paragraph(formula, styles["table"])])
+    kpi_table = LongTable(table_data, colWidths=[53 * mm, 32 * mm, 93 * mm], repeatRows=1)
+    kpi_table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), PDF_NAVY), ("GRID", (0, 0), (-1, -1), 0.35, PDF_LINE),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F4F6F9")]),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 5), ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+        ("TOPPADDING", (0, 0), (-1, -1), 4), ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+    ]))
+    content = [pdf_paragraph("Resumen de indicadores", styles["section"]), kpi_table,
+               pdf_paragraph("Pendientes versus solucionados", styles["section"]), report_status_chart(pending, solved)]
+    critical_labels = [str(row["criticality"] or "No registrado").capitalize() for row in critical_rows]
+    critical_values = [int(row["count"]) for row in critical_rows]
+    critical_chart = report_criticality_chart(critical_labels, critical_values)
+    content.append(pdf_paragraph("Distribución por criticidad", styles["section"]))
+    content.append(critical_chart or pdf_paragraph("No hay hallazgos para graficar.", styles["muted"]))
+    content.append(pdf_paragraph("Distribución por área o sector", styles["section"]))
+    area_chart = report_area_chart(areas)
+    content.append(area_chart or pdf_paragraph("No hay hallazgos para graficar.", styles["muted"]))
+    content.append(pdf_paragraph("Evolución mensual de hallazgos", styles["section"]))
+    month_chart = report_month_chart(months)
+    content.append(month_chart or pdf_paragraph("No hay información histórica suficiente en los últimos 12 meses para graficar.", styles["muted"]))
+
+    conclusions = []
+    if total == 0:
+        conclusions.append("No hay hallazgos registrados en el sistema al momento de generar este informe.")
+    else:
+        conclusions.append("El sistema registra %s hallazgos: %s pendientes y %s solucionados." % (total, pending, solved))
+        if pending > solved:
+            conclusions.append("La cantidad de pendientes supera a la de solucionados.")
+        elif solved > pending:
+            conclusions.append("La cantidad de solucionados supera a la de pendientes.")
+        else:
+            conclusions.append("La cantidad de pendientes y solucionados es equivalente.")
+        if int(summary["overdue"]):
+            conclusions.append("Hay %s hallazgos pendientes con más de 30 días de antigüedad." % int(summary["overdue"]))
+        if critical_counts.get("alta", 0):
+            conclusions.append("Se registran %s hallazgos de criticidad alta." % critical_counts["alta"])
+        if areas:
+            conclusions.append("El área con mayor cantidad de hallazgos es %s (%s)." % (areas[0]["area"], areas[0]["count"]))
+    content.append(pdf_paragraph("Conclusiones basadas en los registros", styles["section"]))
+    for conclusion in conclusions:
+        content.append(Paragraph("- " + escape(conclusion), styles["body"]))
+    content.append(pdf_paragraph("Criterios de cálculo", styles["section"]))
+    content.append(pdf_paragraph("Cada hallazgo se cuenta una sola vez. Pendientes y solucionados son grupos disjuntos por estado. La distribución por criticidad agrupa todos los estados y sus categorías suman el total cuando todos los registros tienen una criticidad reconocida. La distribución por área agrupa cada registro por su location_id. El promedio de resolución considera únicamente hallazgos solucionados con fecha de detección y cierre registradas. El esquema actual no contiene una entidad independiente de inspecciones.", styles["small"]))
+    return content
+
+
+@app.get("/api/reports/executive.pdf")
+@need("supervisor")
+def executive_report_pdf():
+    data = report_snapshot(report_kpi_data)
+    generated = pdf_generated_at()
+    content = executive_report_content(data)
+    return pdf_download(make_report_pdf("INFORME EJECUTIVO DE KPIs", content, generated=generated), "informe-ejecutivo-kpis.pdf")
 
 
 @app.get("/api/dphotos/<int:pid>")

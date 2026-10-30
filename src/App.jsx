@@ -10,6 +10,7 @@ import { FindingDetail, RepairEdit } from './pages/FindingDetail.jsx'
 import { Tags, TagEdit, TagImport } from './pages/Tags.jsx'
 import { DeclassList, DeclassNew, DeclassDetail } from './pages/Declass.jsx'
 import { AreasPage, TypesPage, UsersPage, UserEdit } from './pages/Admin.jsx'
+import ReportsPage from './pages/Reports.jsx'
 
 export const Ctx = createContext(null)
 export const useApp = () => useContext(Ctx)
@@ -30,6 +31,7 @@ const navIconShapes = {
   areas: <><path d="M3.5 20.5h17M5 20.5V8l7-4 7 4v12.5M9 10h.01M15 10h.01M9 14h.01M15 14h.01M10 20.5v-3h4v3" /></>,
   types: <><path d="M9 6h11M9 12h11M9 18h11" /><path d="M4 6h.01M4 12h.01M4 18h.01" /></>,
   users: <><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20c.5-3.2 2.7-5 6.5-5s6 1.8 6.5 5M16 5.2a3.5 3.5 0 0 1 0 6.6M17 15c2.6.5 4 2.2 4.5 5" /></>,
+  reports: <><path d="M5 3.5h9l5 5v12H5z" /><path d="M14 3.5v5h5M8 13h8M8 16.5h8" /></>,
   settings: <><circle cx="12" cy="12" r="3" /><path d="m19.4 15 .1.1 1.1 1.8-1.6 2.7-2.1-.5a7.8 7.8 0 0 1-1.5.9l-.8 2h-3.1l-.8-2a7.8 7.8 0 0 1-1.5-.9l-2.1.5-1.6-2.7 1.1-1.8a7 7 0 0 1 0-1.8l-1.1-1.8L7 8.7l2.1.5a7.8 7.8 0 0 1 1.5-.9l.8-2h3.1l.8 2a7.8 7.8 0 0 1 1.5.9l2.1-.5 1.6 2.7-1.1 1.8a7 7 0 0 1 0 1.8Z" transform="translate(-1 -1) scale(1.08)" /></>,
 }
 
@@ -66,6 +68,7 @@ function TopBar({ user, onLogout }) {
   const admin = [
     ['/tags', 'Tags de equipos', 'tags', 2], ['/areas', 'Áreas', 'areas', 3], ['/tipos', 'Tipos de hallazgo', 'types', 3], ['/usuarios', 'Usuarios', 'users', 3],
   ].filter((item) => rank >= item[3])
+  const canReports = rank >= RANK.supervisor
   const roleNames = { tecnico: 'Técnico', supervisor: 'Supervisor', admin: 'Administrador' }
   const initials = user.name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()
   const link = ([to, label, icon]) => (
@@ -83,6 +86,7 @@ function TopBar({ user, onLogout }) {
           <p className="nav-label">Espacio de trabajo</p>
           {primary.map(link)}
           {admin.length > 0 && <><p className="nav-label nav-label-admin">Administración</p>{admin.map(link)}</>}
+          {canReports && <><p className="nav-label nav-label-admin">Informes</p>{link(['/informes', 'Informes y reportes', 'reports'])}</>}
         </div>
         <div className="sidebar-bottom">
           <NavLink to="/clave" className="side-link account-link" onClick={() => setOpen(false)}><span className="side-icon"><NavIcon name="settings" /></span><span>Cambiar contraseña</span></NavLink>
@@ -108,6 +112,7 @@ function TopBar({ user, onLogout }) {
             <Route path="/hallazgos/:id" element={<FindingDetail />} />
             <Route path="/hallazgos/:id/editar" element={<FindingForm />} />
             <Route path="/hallazgos/:id/reparacion" element={<RepairEdit />} />
+            <Route path="/informes" element={<Guard role="supervisor"><ReportsPage /></Guard>} />
             <Route path="/desclasificaciones" element={<DeclassList />} />
             <Route path="/desclasificaciones/nueva" element={<DeclassNew />} />
             <Route path="/desclasificaciones/:id" element={<DeclassDetail />} />

@@ -84,6 +84,7 @@ export function FindingDetail() {
                     <p style={{ whiteSpace: 'pre-wrap' }}>{f.resolution}</p>
                     <Gallery ids={f.photos.despues} base="/api/photos" />
                     <div className="btns" style={{ marginBottom: '.6rem' }}>
+                      <a className="btn y" href={`/api/reports/findings/${f.id}.pdf`}>Generar informe PDF</a>
                       <Link className="btn l" to={`/hallazgos/${f.id}/reparacion`}>Editar reparación</Link>
                       <button type="button" className="btn l" onClick={reopen}>Reabrir hallazgo</button>
                     </div>
