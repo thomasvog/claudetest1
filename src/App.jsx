@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import { Link, NavLink, Route, Routes, useLocation, Navigate } from 'react-router-dom'
 import { api, setCsrf } from './api.js'
 import { Msg, RANK } from './ui.jsx'
@@ -22,6 +22,21 @@ const SUN = (
   </svg>
 )
 
+const navIconShapes = {
+  overview: <><rect x="3.5" y="3.5" width="7" height="7" rx="1" /><rect x="13.5" y="3.5" width="7" height="7" rx="1" /><rect x="3.5" y="13.5" width="7" height="7" rx="1" /><rect x="13.5" y="13.5" width="7" height="7" rx="1" /></>,
+  findings: <><circle cx="11" cy="11" r="7.5" /><path d="M16.5 16.5 21 21M11 7.5v7M7.5 11h7" /></>,
+  declass: <><path d="M12 3 20 7v5c0 4.7-3.1 7.7-8 9-4.9-1.3-8-4.3-8-9V7l8-4Z" /><path d="m8.5 12 2.2 2.2 4.8-4.8" /></>,
+  tags: <><path d="M3.5 12V5.5a2 2 0 0 1 2-2H12l8.5 8.5-8.5 8.5L3.5 12Z" /><circle cx="8" cy="8" r="1" /></>,
+  areas: <><path d="M3.5 20.5h17M5 20.5V8l7-4 7 4v12.5M9 10h.01M15 10h.01M9 14h.01M15 14h.01M10 20.5v-3h4v3" /></>,
+  types: <><path d="M9 6h11M9 12h11M9 18h11" /><path d="M4 6h.01M4 12h.01M4 18h.01" /></>,
+  users: <><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20c.5-3.2 2.7-5 6.5-5s6 1.8 6.5 5M16 5.2a3.5 3.5 0 0 1 0 6.6M17 15c2.6.5 4 2.2 4.5 5" /></>,
+  settings: <><circle cx="12" cy="12" r="3" /><path d="m19.4 15 .1.1 1.1 1.8-1.6 2.7-2.1-.5a7.8 7.8 0 0 1-1.5.9l-.8 2h-3.1l-.8-2a7.8 7.8 0 0 1-1.5-.9l-2.1.5-1.6-2.7 1.1-1.8a7 7 0 0 1 0-1.8l-1.1-1.8L7 8.7l2.1.5a7.8 7.8 0 0 1 1.5-.9l.8-2h3.1l.8 2a7.8 7.8 0 0 1 1.5.9l2.1-.5 1.6 2.7-1.1 1.8a7 7 0 0 1 0 1.8Z" transform="translate(-1 -1) scale(1.08)" /></>,
+}
+
+function NavIcon({ name }) {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{navIconShapes[name]}</svg>
+}
+
 function useTheme() {
   const mq = typeof window !== 'undefined' && window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null
   const eff = () => document.documentElement.getAttribute('data-theme') || (mq && mq.matches ? 'dark' : 'light')
@@ -44,43 +59,88 @@ function useTheme() {
 function TopBar({ user, onLogout }) {
   const [theme, toggle] = useTheme()
   const [open, setOpen] = useState(false)
-  const box = useRef(null)
   const loc = useLocation()
   useEffect(() => { setOpen(false) }, [loc.pathname])
   useEffect(() => {
-    const out = (e) => { if (box.current && !box.current.contains(e.target)) setOpen(false) }
     const esc = (e) => { if (e.key === 'Escape') setOpen(false) }
-    document.addEventListener('click', out)
     document.addEventListener('keydown', esc)
-    return () => { document.removeEventListener('click', out); document.removeEventListener('keydown', esc) }
+    return () => document.removeEventListener('keydown', esc)
   }, [])
   const rank = user ? RANK[user.role] : 0
-  const items = [
-    ['/', 'Resumen', 1], ['/hallazgos', 'Hallazgos', 1], ['/hallazgos/nuevo', 'Nuevo hallazgo', 1], ['/desclasificaciones', 'Desclasificaciones', 1],
-    ['/tags', 'Tags', 2], ['/areas', 'Áreas', 3], ['/tipos', 'Tipos de hallazgo', 3], ['/usuarios', 'Usuarios', 3],
-  ].filter((i) => rank >= i[2])
+  const primary = [
+    ['/', 'Resumen', 'overview'], ['/hallazgos', 'Hallazgos', 'findings'], ['/desclasificaciones', 'Desclasificaciones', 'declass'],
+  ]
+  const admin = [
+    ['/tags', 'Tags de equipos', 'tags', 2], ['/areas', 'Áreas', 'areas', 3], ['/tipos', 'Tipos de hallazgo', 'types', 3], ['/usuarios', 'Usuarios', 'users', 3],
+  ].filter((item) => rank >= item[3])
+  const roleNames = { tecnico: 'Técnico', supervisor: 'Supervisor', admin: 'Administrador' }
+  const initials = user.name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()
+  const link = ([to, label, icon]) => (
+    <NavLink key={to} to={to} end={to === '/' || to === '/hallazgos'} className="side-link" onClick={() => setOpen(false)}>
+      <span className="side-icon"><NavIcon name={icon} /></span>
+      <span>{label}</span>
+    </NavLink>
+  )
   return (
-    <header className="top">
-      {user && (
-        <div className="menu" ref={box}>
-          <button type="button" className="ib" aria-label="Menú" aria-expanded={open} onClick={() => setOpen(!open)}>
-            <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" fill="none" /></svg>
-          </button>
-          {open && (
-            <nav className="nav">
-              {items.map(([to, label]) => <NavLink key={to} to={to} end={to === '/' || to === '/hallazgos'}>{label}</NavLink>)}
-              <hr />
-              <NavLink to="/clave">Cambiar contraseña</NavLink>
-            </nav>
-          )}
+    <div className={`app-shell${open ? ' menu-open' : ''}`}>
+      {open && <button className="nav-backdrop" aria-label="Cerrar menú" onClick={() => setOpen(false)} />}
+      <aside className="sidebar" aria-label="Navegación principal">
+        <Link to="/" className="brand"><img src="/logo.png" alt="Petrocuyo HAZLOC" /><span><b>Inspecciones</b><small>SEGURIDAD OPERACIONAL</small></span></Link>
+        <div className="side-nav">
+          <p className="nav-label">Espacio de trabajo</p>
+          {primary.map(link)}
+          {admin.length > 0 && <><p className="nav-label nav-label-admin">Administración</p>{admin.map(link)}</>}
         </div>
-      )}
-      <Link to="/" className="logo"><img src="/logo.png" alt="Petrocuyo HAZLOC - Inspecciones" /></Link>
-      <span className="r">
-        <button type="button" className="ib" onClick={toggle} aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'} title="Cambiar tema">{theme === 'dark' ? SUN : MOON}</button>
-        {user && <>{user.name}<button type="button" className="out" onClick={onLogout}>Salir</button></>}
-      </span>
-    </header>
+        <div className="sidebar-bottom">
+          <NavLink to="/clave" className="side-link account-link" onClick={() => setOpen(false)}><span className="side-icon"><NavIcon name="settings" /></span><span>Cambiar contraseña</span></NavLink>
+          <div className="user-card"><span className="avatar">{initials}</span><span className="user-meta"><b>{user.name}</b><small>{roleNames[user.role] || user.role}</small></span></div>
+          <div className="side-actions">
+            <button type="button" className="side-action" onClick={toggle} aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'} title="Cambiar tema">{theme === 'dark' ? SUN : MOON}<span>Apariencia</span></button>
+            <button type="button" className="side-action logout" onClick={onLogout} aria-label="Cerrar sesión" title="Cerrar sesión"><span aria-hidden="true">↗</span><span>Salir</span></button>
+          </div>
+        </div>
+      </aside>
+      <div className="workspace">
+        <header className="topbar">
+          <button type="button" className="mobile-menu" aria-label="Abrir menú" aria-expanded={open} onClick={() => setOpen(!open)}><span /><span /><span /></button>
+          <div className="topbar-context"><span>Petrocuyo</span><i>/</i><b>HAZLOC · Inspecciones</b></div>
+          <Link className="btn y topbar-cta" to="/hallazgos/nuevo"><span aria-hidden="true">＋</span> Nuevo hallazgo</Link>
+        </header>
+        <main className="page-content">
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/hallazgos" element={<Findings />} />
+            <Route path="/hallazgos/nuevo" element={<FindingForm />} />
+            <Route path="/hallazgos/:id" element={<FindingDetail />} />
+            <Route path="/hallazgos/:id/editar" element={<FindingForm />} />
+            <Route path="/hallazgos/:id/reparacion" element={<RepairEdit />} />
+            <Route path="/desclasificaciones" element={<DeclassList />} />
+            <Route path="/desclasificaciones/nueva" element={<DeclassNew />} />
+            <Route path="/desclasificaciones/:id" element={<DeclassDetail />} />
+            <Route path="/tags" element={<Guard role="supervisor"><Tags /></Guard>} />
+            <Route path="/tags/importar" element={<Guard role="admin"><TagImport /></Guard>} />
+            <Route path="/tags/:id" element={<Guard role="supervisor"><TagEdit /></Guard>} />
+            <Route path="/areas" element={<Guard role="admin"><AreasPage /></Guard>} />
+            <Route path="/tipos" element={<Guard role="admin"><TypesPage /></Guard>} />
+            <Route path="/usuarios" element={<Guard role="admin"><UsersPage /></Guard>} />
+            <Route path="/usuarios/:id" element={<Guard role="admin"><UserEdit /></Guard>} />
+            <Route path="/clave" element={<Password />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </main>
+      </div>
+    </div>
+  )
+}
+
+function AuthLayout({ children }) {
+  const [theme, toggle] = useTheme()
+  return (
+    <div className="auth-page">
+      <header className="auth-top"><Link to="/" className="brand auth-brand"><img src="/logo.png" alt="Petrocuyo HAZLOC" /><span><b>Inspecciones</b><small>SEGURIDAD OPERACIONAL</small></span></Link><button type="button" className="theme-button" onClick={toggle} aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}>{theme === 'dark' ? SUN : MOON}</button></header>
+      <main className="auth-layout"><section className="auth-intro"><span className="eyebrow">PETROCUYO · HAZLOC</span><h1>Seguridad que se ve en campo.</h1><p>Un espacio de trabajo para registrar, priorizar y resolver hallazgos de inspección.</p><div className="auth-mark"><span>H</span><i>Hazardous locations</i></div></section><div className="auth-form">{children}</div></main>
+      <footer className="auth-footer">Inspecciones · Seguridad operacional</footer>
+    </div>
   )
 }
 
@@ -112,31 +172,7 @@ export default function App() {
   const ctx = { user: boot.user, meta: boot.meta, refresh, setCsrf }
   return (
     <Ctx.Provider value={ctx}>
-      <TopBar user={boot.user} onLogout={logout} />
-      {boot.needsSetup ? <div className="center"><Setup /></div> : !boot.user ? <div className="center"><Login /></div> : (
-        <main>
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/hallazgos" element={<Findings />} />
-            <Route path="/hallazgos/nuevo" element={<FindingForm />} />
-            <Route path="/hallazgos/:id" element={<FindingDetail />} />
-            <Route path="/hallazgos/:id/editar" element={<FindingForm />} />
-            <Route path="/hallazgos/:id/reparacion" element={<RepairEdit />} />
-            <Route path="/desclasificaciones" element={<DeclassList />} />
-            <Route path="/desclasificaciones/nueva" element={<DeclassNew />} />
-            <Route path="/desclasificaciones/:id" element={<DeclassDetail />} />
-            <Route path="/tags" element={<Guard role="supervisor"><Tags /></Guard>} />
-            <Route path="/tags/importar" element={<Guard role="admin"><TagImport /></Guard>} />
-            <Route path="/tags/:id" element={<Guard role="supervisor"><TagEdit /></Guard>} />
-            <Route path="/areas" element={<Guard role="admin"><AreasPage /></Guard>} />
-            <Route path="/tipos" element={<Guard role="admin"><TypesPage /></Guard>} />
-            <Route path="/usuarios" element={<Guard role="admin"><UsersPage /></Guard>} />
-            <Route path="/usuarios/:id" element={<Guard role="admin"><UserEdit /></Guard>} />
-            <Route path="/clave" element={<Password />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </main>
-      )}
+      {boot.user ? <TopBar user={boot.user} onLogout={logout} /> : <AuthLayout>{boot.needsSetup ? <Setup /> : <Login />}</AuthLayout>}
     </Ctx.Provider>
   )
 }

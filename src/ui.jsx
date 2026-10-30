@@ -21,7 +21,7 @@ export const Msg = ({ kind = '', children }) => (children ? <div className={`ale
 
 // Muestra «cargando», el error o el contenido cuando llegan los datos.
 export function Async({ s, children }) {
-  if (s.loading && !s.data) return <p className="mu">Cargando…</p>
+  if (s.loading && !s.data) return <div className="loading-state" role="status"><span className="loader" /> Cargando…</div>
   if (s.error && !s.data) return <Msg kind="err">{s.error}</Msg>
   return s.data ? children(s.data) : null
 }
