@@ -38,15 +38,8 @@ function NavIcon({ name }) {
 }
 
 function useTheme() {
-  const mq = typeof window !== 'undefined' && window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null
-  const eff = () => document.documentElement.getAttribute('data-theme') || (mq && mq.matches ? 'dark' : 'light')
+  const eff = () => document.documentElement.getAttribute('data-theme') || 'dark'
   const [theme, setTheme] = useState(eff)
-  useEffect(() => {
-    if (!mq || !mq.addEventListener) return undefined
-    const h = () => setTheme(eff())
-    mq.addEventListener('change', h)
-    return () => mq.removeEventListener('change', h)
-  }, [])  // eslint-disable-line react-hooks/exhaustive-deps
   const toggle = () => {
     const n = theme === 'dark' ? 'light' : 'dark'
     document.documentElement.setAttribute('data-theme', n)
@@ -103,6 +96,7 @@ function TopBar({ user, onLogout }) {
       <div className="workspace">
         <header className="topbar">
           <button type="button" className="mobile-menu" aria-label="Abrir menú" aria-expanded={open} onClick={() => setOpen(!open)}><span /><span /><span /></button>
+          <Link to="/" className="topbar-brand"><img src="/logo.png" alt="Petrocuyo HAZLOC" /></Link>
           <div className="topbar-context"><span>Petrocuyo</span><i>/</i><b>HAZLOC · Inspecciones</b></div>
           <Link className="btn y topbar-cta" to="/hallazgos/nuevo"><span aria-hidden="true">＋</span> Nuevo hallazgo</Link>
         </header>

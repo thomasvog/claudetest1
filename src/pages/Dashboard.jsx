@@ -2,6 +2,24 @@ import { Link } from 'react-router-dom'
 import { api } from '../api.js'
 import { Async, FindingCard, useAsync } from '../ui.jsx'
 
+const statIcons = {
+  pending: <><circle cx="12" cy="12" r="8.5" /><path d="M12 7v5l3 2" /></>,
+  solved: <><circle cx="12" cy="12" r="8.5" /><path d="m8 12 2.5 2.5L16 9" /></>,
+  high: <><path d="M12 3 22 20H2L12 3Z" /><path d="M12 9v5M12 17h.01" /></>,
+  total: <><rect x="4" y="4" width="16" height="16" rx="2" /><path d="M8 9h8M8 13h8M8 17h4" /></>,
+}
+
+function StatCard({ to, tone, icon, label, value, detail }) {
+  return (
+    <Link className={`stat-card ${tone}`} to={to}>
+      <span className="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{statIcons[icon]}</svg></span>
+      <span className="stat-label">{label}</span>
+      <b className="stat-value">{value}</b>
+      <span className="stat-detail">{detail}</span>
+    </Link>
+  )
+}
+
 export default function Dashboard() {
   const s = useAsync(() => api.get('/api/dashboard'), [])
   return (
@@ -15,23 +33,24 @@ export default function Dashboard() {
           const tot = d.pending + d.solved
           const mx = Math.max(1, ...d.byArea.map((a) => a.n))
           const progress = tot ? Math.round((d.solved * 100) / tot) : 0
+          const high = d.byCrit.alta || 0
           return (
             <>
-              <div className="overview-grid">
-                <section className="card overview-total">
-                  <div className="overview-head"><div><span className="section-kicker">SEGUIMIENTO GENERAL</span><p className="overview-title">Hallazgos registrados</p></div><span className="total-badge">{tot} en total</span></div>
-                  <div className="overview-metrics"><div><b className="big">{d.pending}</b><span>Pendientes</span></div><div className="solved-metric"><b>{d.solved}</b><span>Solucionados</span></div></div>
-                  <div className="completion-label"><span>Progreso de resolución</span><b>{progress}%</b></div>
-                  <div className="split"><i style={{ width: `${progress}%` }} /></div>
-                </section>
-                <section className={`card attention-card ${d.overdue ? 'has-overdue' : 'clear'}`}>
-                  <span className="section-kicker">ATENCIÓN REQUERIDA</span>
-                  <div className="attention-count">{d.overdue}</div>
-                  <p>{d.overdue ? `Pendiente${d.overdue === 1 ? '' : 's'} con más de 30 días` : 'Sin hallazgos vencidos por antigüedad'}</p>
-                  {d.overdue > 0 && <Link to="/hallazgos?status=pendiente&overdue=1" className="attention-link">Revisar pendientes <span aria-hidden="true">→</span></Link>}
-                </section>
+              <section className={`priority-panel ${d.overdue || high ? 'is-critical' : 'is-clear'}`} aria-label="Alertas prioritarias">
+                <span className="priority-symbol" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3 22 20H2L12 3Z" /><path d="M12 9v5M12 17h.01" /></svg></span>
+                <div className="priority-copy"><span className="section-kicker">ALERTAS PRIORITARIAS</span><b>{d.overdue || high ? 'Requieren atención' : 'Todo bajo control'}</b><p>{d.overdue ? `${d.overdue} pendiente${d.overdue === 1 ? '' : 's'} con más de 30 días.` : 'No hay pendientes con más de 30 días.'} {high ? `${high} hallazgo${high === 1 ? '' : 's'} de criticidad alta.` : 'Sin hallazgos pendientes de criticidad alta.'}</p></div>
+                <div className="priority-actions">
+                  {d.overdue > 0 && <Link className="btn alert-action" to="/hallazgos?status=pendiente&overdue=1">Ver vencidos <span aria-hidden="true">→</span></Link>}
+                  {high > 0 && <Link className="btn danger-action" to="/hallazgos?crit=alta&status=pendiente">Ver alta criticidad <span aria-hidden="true">→</span></Link>}
+                </div>
+              </section>
+              <div className="stats-grid">
+                <StatCard to="/hallazgos?status=pendiente" tone="orange" icon="pending" label="HALLAZGOS PENDIENTES" value={d.pending} detail="Requieren seguimiento" />
+                <StatCard to="/hallazgos?status=solucionado" tone="green" icon="solved" label="HALLAZGOS SOLUCIONADOS" value={d.solved} detail={tot ? `${progress}% del total registrado` : 'Sin registros todavía'} />
+                <StatCard to="/hallazgos?crit=alta&status=pendiente" tone="red" icon="high" label="RIESGO ALTO" value={high} detail="Pendientes de criticidad alta" />
+                <StatCard to="/hallazgos" tone="blue" icon="total" label="TOTAL DE HALLAZGOS" value={tot} detail="Registros de inspección" />
               </div>
-              <div className="section-heading"><div><span className="section-kicker">PRIORIZACIÓN</span><h2>Pendientes por criticidad</h2></div></div>
+              <div className="section-heading dashboard-section-title"><div><span className="section-kicker">PRIORIZACIÓN</span><h2>Pendientes por criticidad</h2></div></div>
               <div className="tiles">
                 {['alta', 'media', 'baja'].map((c) => (
                   <Link key={c} className={`tile ${c}`} to={`/hallazgos?crit=${c}&status=pendiente`}>
