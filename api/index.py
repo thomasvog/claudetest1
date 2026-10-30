@@ -99,26 +99,14 @@ SCHEMA = [
     "CREATE INDEX IF NOT EXISTS ix_f ON findings(status, criticality, zone, location_id)",
     "CREATE INDEX IF NOT EXISTS ix_p ON photos(finding_id)",
 ]
-_ready = _has = False
+_ready = False
 
 
 def sync_areas():
-    """Deja en la base exactamente las áreas fijas. Lo que esté en otras áreas (datos de prueba anteriores) se elimina."""
-    run("UPDATE locations SET parent_id=NULL WHERE parent_id IS NOT NULL")
-    keep = {}
-    for r in rows("SELECT id, name FROM locations ORDER BY id"):
-        if r["name"] in AREAS and r["name"] not in keep:
-            keep[r["name"]] = r["id"]
-        elif r["name"] in AREAS:  # duplicado de un área fija: se reasigna a la primera
-            run("UPDATE findings SET location_id=%s WHERE location_id=%s", keep[r["name"]], r["id"])
-            run("UPDATE equipment SET location_id=%s WHERE location_id=%s", keep[r["name"]], r["id"])
-            run("DELETE FROM locations WHERE id=%s", r["id"])
-    run("DELETE FROM findings WHERE location_id IN (SELECT id FROM locations WHERE name <> ALL(%s))", AREAS)
-    run("DELETE FROM equipment WHERE location_id IN (SELECT id FROM locations WHERE name <> ALL(%s))", AREAS)
-    run("DELETE FROM locations WHERE name <> ALL(%s)", AREAS)
+    """Asegura las áreas configuradas sin modificar ni eliminar datos existentes."""
     try:
         run("CREATE UNIQUE INDEX IF NOT EXISTS ux_loc_name ON locations(name)")
-    except psycopg.Error:
+    except psycopg.errors.UniqueViolation:
         pass
     for n in AREAS:
         run("INSERT INTO locations(name) SELECT %s WHERE NOT EXISTS (SELECT 1 FROM locations WHERE name=%s)", n, n)
@@ -167,9 +155,7 @@ def dt(s):
 
 
 def has_users():
-    if not _has:
-        _has = db().execute("SELECT 1 FROM users LIMIT 1").fetchone() is not None
-    return _has
+    return db().execute("SELECT 1 FROM users LIMIT 1").fetchone() is not None
 
 
 def locs():
@@ -392,16 +378,14 @@ def gate():
     if not URL:
         return err("Falta conectar la base de datos (variable DATABASE_URL). Ver el README.", 503)
     if not _ready:
-        for s in SCHEMA:
-            try:
+        try:
+            for s in SCHEMA:
                 db().execute(s)
-            except psycopg.Error:
-                pass
-        for fn in (sync_areas, seed_types):
-            try:
+            for fn in (sync_areas, seed_types):
                 fn()
-            except psycopg.Error:
-                pass
+        except psycopg.Error as e:
+            app.logger.error("No se pudo inicializar la base de datos (%s)", type(e).__name__)
+            return err("No se pudo preparar la base de datos. Revisá la conexión y los permisos del usuario de Neon.", 503)
         _ready = True
     session.setdefault("csrf", secrets.token_hex(16))
     if request.method not in ("GET", "HEAD", "OPTIONS") and not hmac.compare_digest(request.headers.get("X-CSRF-Token", ""), session["csrf"]):
@@ -430,6 +414,12 @@ def not_found(_):
 @app.errorhandler(405)
 def bad_method(_):
     return err("Operación no permitida.", 405)
+
+
+@app.errorhandler(psycopg.Error)
+def database_error(e):
+    app.logger.error("Falló una operación de base de datos (%s)", type(e).__name__)
+    return err("No se pudo completar la operación en la base de datos. Probá de nuevo.", 503)
 
 
 @app.errorhandler(Exception)

@@ -25,12 +25,13 @@ El frontend y la API comparten el mismo dominio, así que no hay que configurar 
 Conviene crear un repositorio y un proyecto de Vercel **nuevos**, y dejar el anterior como respaldo hasta que todo funcione.
 
 1. **GitHub:** crear un repositorio nuevo. En *Add file › Upload files*, arrastrar **el contenido** de la carpeta descomprimida (los archivos y las carpetas `api`, `public` y `src`) y confirmar con *Commit changes*. Comprobar después, en la página del repositorio, que se vean las carpetas `api`, `public` y `src`.
-2. **Vercel:** *Add New › Project*, importar el repositorio. Vercel detecta **Vite** solo: no hay que cambiar nada en *Build and Output Settings*. Presionar *Deploy*.
-3. **Base de datos:** en el proyecto, pestaña *Storage*, conectar la base de Neon que ya existe (o, si no aparece, copiar la variable `DATABASE_URL` desde *Settings › Environment Variables* del proyecto anterior y agregarla en el nuevo).
-4. **Redeploy:** pestaña *Deployments*, menú ⋯ del último despliegue › *Redeploy*.
-5. Abrir la URL del proyecto e ingresar con los usuarios que ya existen.
+2. **Vercel:** *Add New › Project*, importar el repositorio. Vercel detecta **Vite** solo: no hay que cambiar nada en *Build and Output Settings*.
+3. **Variables de entorno:** antes del primer deploy, en *Settings › Environment Variables*, configurar `DATABASE_URL` con la URL pooled de Neon (host que incluye `-pooler` y `sslmode=require`) y `SECRET_KEY` con un valor aleatorio largo y estable. Si la base está vacía, configurar también `SETUP_KEY` temporal para crear el primer administrador. Aplicarlas al entorno de producción (y a Preview solo si se usa una base separada).
+4. **Base de datos:** en el proyecto, pestaña *Storage*, conectar la base de Neon que ya existe (o copiar `DATABASE_URL` desde *Settings › Environment Variables* del proyecto anterior y agregarla en el nuevo). No pegar credenciales en el código ni en el repositorio.
+5. **Deploy:** presionar *Deploy*. Después de agregar o modificar variables en un proyecto ya desplegado, usar *Deployments* › menú ⋯ del último despliegue › *Redeploy*.
+6. Abrir la URL del proyecto e ingresar con los usuarios que ya existen.
 
-Si se usa una base de Neon **nueva y vacía**: antes del paso 2 agregar la variable `SETUP_KEY` (un código a elección). La primera vez, la aplicación pide ese código para crear el administrador.
+Si se usa una base de Neon **nueva y vacía**, `SETUP_KEY` debe estar definido. La primera vez, la aplicación pide ese código para crear el administrador.
 
 ## Qué hace la API
 
