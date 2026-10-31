@@ -58,7 +58,6 @@ export default function Dashboard() {
       </section>
       <Async s={s}>
         {(d) => {
-          const tot = d.total
           const mx = Math.max(1, ...d.byArea.map((a) => a.n))
           const progress = d.resolutionRate == null ? 0 : Math.min(100, Math.max(0, d.resolutionRate))
           const high = d.byCrit.alta || 0
@@ -86,7 +85,7 @@ export default function Dashboard() {
                 <StatCard to="/hallazgos?status=pendiente" tone="orange" icon="pending" label="PENDIENTES" value={d.pending} detail="Requieren acción técnica" />
                 <StatCard to="/hallazgos?status=solucionado" tone="green" icon="solved" label="SOLUCIONADOS" value={d.solved} detail={d.resolutionRate == null ? 'Sin registros todavía' : 'Del total de hallazgos'} percentage={d.resolutionRate} progress={progress} />
                 <StatCard to="/hallazgos?crit=alta&status=pendiente" tone="red" icon="high" label="RIESGO ALTO" value={high} detail="Pendientes de criticidad alta" />
-                <StatCard tone="blue" icon="total" label="TOTAL INSPECCIONES" value="—" detail="Historial registrado" note={`No hay conteo independiente de inspecciones. Hallazgos registrados: ${tot}.`} />
+                <StatCard tone="blue" icon="total" label="TOTAL INSPECCIONES" value={d.pending + d.solved} detail="Pendientes y solucionados" />
               </div>
               <section className="criticality-panel" aria-labelledby="criticality-title">
                 <div className="criticality-heading"><h2 id="criticality-title">Pendientes por Criticidad</h2><span>Filtrar por nivel</span></div>

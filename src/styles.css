@@ -617,8 +617,8 @@ th,td{border-color:var(--ln)}
 }
 @media(min-width:701px){
 	.app-shell.menu-open{grid-template-columns:0 minmax(0,1fr)}
-	.app-shell.menu-open .sidebar{position:fixed;left:0;top:0;width:258px;height:100dvh;display:flex;z-index:45}
-	.app-shell.menu-open .nav-backdrop{display:block;position:fixed;inset:0;z-index:40;border:0;background:#030611aa}
+	.app-shell.menu-open .sidebar{display:none}
+	.app-shell.menu-open .nav-backdrop{display:none}
 }
 @media(prefers-reduced-motion:reduce){
 	.institution-action,.topbar-quick-add,.topbar .mobile-menu,.stat-card,.criticality-card,.stat-progress i{transition:none}
