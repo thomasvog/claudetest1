@@ -1,5 +1,5 @@
 :root{--bg:#05091b;--pa:#111a30;--tx:#f4f6fa;--mu:#94a3b8;--ln:#26334b;--dk:#080d20;--ye:#ff9900;--alta:#f0004f;--media:#f5b942;--baja:#10c995;--ok:#10c995;--in:#0b1225;--ib:#35425c;--lk:#ffad33;--msg:#281525;--msgb:#6c2344;--btn:#ff9900;color-scheme:dark}
-:root[data-theme="light"]{--bg:#f1f4ef;--pa:#fff;--tx:#17251f;--mu:#64736b;--ln:#dce5dd;--dk:#18372d;--ye:#d8ed8c;--alta:#bd5143;--media:#c5822b;--baja:#36836b;--ok:#2d7658;--in:#fcfdfb;--ib:#b8c6bc;--lk:#28634d;--msg:#f7f1df;--msgb:#e7d6a8;--btn:#214b39;color-scheme:light}
+:root[data-theme="light"]{--bg:#f5f7fa;--pa:#fff;--tx:#151c2f;--mu:#687990;--ln:#dfe5ed;--dk:#fff;--ye:#ff9900;--alta:#c8104f;--media:#b94e00;--baja:#147254;--ok:#168d65;--in:#fff;--ib:#d2dbe6;--lk:#325071;--msg:#fff8eb;--msgb:#f1d9a2;--btn:#ff9900;color-scheme:light}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.5 system-ui,"Segoe UI",Roboto,sans-serif}
 a{color:var(--lk)}
@@ -622,4 +622,88 @@ th,td{border-color:var(--ln)}
 }
 @media(prefers-reduced-motion:reduce){
 	.institution-action,.topbar-quick-add,.topbar .mobile-menu,.stat-card,.criticality-card,.stat-progress i{transition:none}
+}
+
+:root[data-theme="light"] body{background-color:var(--bg);background-image:none}
+:root[data-theme="light"] .sidebar{background:#fff;border-color:var(--ln);color:var(--tx);box-shadow:2px 0 12px #24364d0a}
+:root[data-theme="light"] .brand small,:root[data-theme="light"] .nav-label{color:var(--mu)}
+:root[data-theme="light"] .side-link{color:#46556b}
+:root[data-theme="light"] .side-link:hover{background:#f3f6f9;color:var(--tx)}
+:root[data-theme="light"] .side-link.active{background:#fff2dc;color:#9a4f00}
+:root[data-theme="light"] .sidebar-bottom,:root[data-theme="light"] .user-card{border-color:var(--ln)}
+:root[data-theme="light"] .avatar{background:#fff0d3;color:#935100;border-color:#f1d29a}
+:root[data-theme="light"] .user-meta b{color:var(--tx)}
+:root[data-theme="light"] .user-meta small,:root[data-theme="light"] .side-action{color:var(--mu)}
+:root[data-theme="light"] .side-action{border-color:var(--ln)}
+:root[data-theme="light"] .side-action:hover{background:#f3f6f9;color:var(--tx)}
+:root[data-theme="light"] .topbar{background:#fff;border-color:var(--ln);box-shadow:0 2px 8px #24364d0a}
+:root[data-theme="light"] .topbar .mobile-menu{background:#fff;border-color:var(--ln);color:#34445b}
+:root[data-theme="light"] .topbar .mobile-menu:hover{background:#f3f6f9}
+:root[data-theme="light"] .institution-card,:root[data-theme="light"] .stat-card,:root[data-theme="light"] .criticality-panel{border-color:var(--ln);background:#fff;box-shadow:0 3px 10px #24364d12}
+:root[data-theme="light"] .institution-card h1{color:var(--tx)}
+:root[data-theme="light"] .institution-description{color:var(--mu)}
+:root[data-theme="light"] .institution-standard{color:#c76800}
+:root[data-theme="light"] .institution-scope{color:var(--mu)}
+:root[data-theme="light"] .institution-divider{background:#e2a947}
+:root[data-theme="light"] .institution-action:not(.institution-action-primary){background:#f7f9fb;border-color:var(--ln);color:#34445b}
+:root[data-theme="light"] .institution-action:not(.institution-action-primary):hover{background:#eef2f6}
+:root[data-theme="light"] .overdue-alert{border-color:#f1c2d0;background:#fff5f7;box-shadow:0 3px 10px #c8104f0a}
+:root[data-theme="light"] .overdue-alert-icon{border-color:#f3c7d3;background:#ffe8ee;color:#c8104f}
+:root[data-theme="light"] .overdue-alert-copy .section-kicker{color:#a73555}
+:root[data-theme="light"] .overdue-alert-copy>b{color:#6e243a}
+:root[data-theme="light"] .overdue-alert-copy p{color:#775b64}
+:root[data-theme="light"] .overdue-clear{border-color:#a9dfca;background:#f1fbf6;color:#286b52}
+:root[data-theme="light"] .overdue-clear-icon{background:#e0f5eb;color:#168d65}
+:root[data-theme="light"] .stat-card{background:#fff;color:var(--tx)}
+:root[data-theme="light"] .stat-card:hover{border-color:#becbd9;box-shadow:0 7px 18px #24364d18}
+:root[data-theme="light"] .stat-icon{border-color:var(--ln);background:#f5f7fa}
+:root[data-theme="light"] .stat-value{color:var(--tx)}
+:root[data-theme="light"] .stat-card.orange .stat-icon,:root[data-theme="light"] .stat-card.orange .stat-value,:root[data-theme="light"] .stat-card.orange .stat-percentage{color:#d77500}
+:root[data-theme="light"] .stat-card.green .stat-icon,:root[data-theme="light"] .stat-card.green .stat-value{color:#168d65}
+:root[data-theme="light"] .stat-card.red .stat-icon,:root[data-theme="light"] .stat-card.red .stat-value{color:#c8104f}
+:root[data-theme="light"] .stat-card.blue .stat-icon,:root[data-theme="light"] .stat-card.blue .stat-value{color:#52647c}
+:root[data-theme="light"] .stat-card.red{border-color:#efb6c8}
+:root[data-theme="light"] .stat-card.red .stat-icon{border-color:#f1c5d2;background:#fff3f6}
+:root[data-theme="light"] .stat-progress{background:#edf1f6}
+:root[data-theme="light"] .criticality-heading h2{color:var(--tx)}
+:root[data-theme="light"] .criticality-card{border-width:2px}
+:root[data-theme="light"] .criticality-card.alta{border-color:#f4bfce;background:#fff6f8}
+:root[data-theme="light"] .criticality-card.media{border-color:#f4df80;background:#fffdf3}
+:root[data-theme="light"] .criticality-card.baja{border-color:#a5e5c9;background:#f3fbf7}
+:root[data-theme="light"] .criticality-card.alta>span,:root[data-theme="light"] .criticality-card.alta b{color:#aa1245}
+:root[data-theme="light"] .criticality-card.media>span,:root[data-theme="light"] .criticality-card.media b{color:#a94800}
+:root[data-theme="light"] .criticality-card.baja>span,:root[data-theme="light"] .criticality-card.baja b{color:#126b4f}
+:root[data-theme="light"] .criticality-card.alta small{color:#bd3e64}
+:root[data-theme="light"] .criticality-card.media small{color:#b35a13}
+:root[data-theme="light"] .criticality-card.baja small{color:#268061}
+:root[data-theme="light"] .dashboard-directory-link a{color:#42536b}
+:root[data-theme="light"] .dashboard-directory-link a:hover{color:#b85b00}
+:root[data-theme="light"] .attention-card.has-overdue{border-color:#f1c2d0;background:#fff5f7}
+:root[data-theme="light"] .attention-card.clear{border-color:#a9dfca;background:#f1fbf6}
+:root[data-theme="light"] .attention-count{color:#c8104f}
+:root[data-theme="light"] .attention-card.clear .attention-count{color:#168d65}
+:root[data-theme="light"] .empty-state{border-color:var(--ln);background:#fff;color:var(--mu)}
+:root[data-theme="light"] .it{background:#fff;border-color:var(--ln);box-shadow:0 3px 10px #24364d0d}
+:root[data-theme="light"] .it:hover{border-color:#becbd9;box-shadow:0 6px 16px #24364d14}
+:root[data-theme="light"] .scroll{background:#fff;border-color:var(--ln);box-shadow:0 4px 12px #24364d0d}
+:root[data-theme="light"] th{background:#f2f5f8;color:#64758c}
+:root[data-theme="light"] tbody tr:hover{background:#f7f9fb}
+:root[data-theme="light"] .split{background:#e8edf2}
+:root[data-theme="light"] .tr{background:#edf1f6}
+:root[data-theme="light"] .auth-page{background-color:var(--bg);background-image:none}
+:root[data-theme="light"] .auth-top{background:#fff;border-color:var(--ln)}
+:root[data-theme="light"] .auth-intro{border-color:var(--ln);background:#fff;color:var(--tx);box-shadow:0 8px 24px #24364d0d}
+:root[data-theme="light"] .auth-intro:after{background-image:linear-gradient(#24364d08 1px,transparent 1px),linear-gradient(90deg,#24364d08 1px,transparent 1px)}
+:root[data-theme="light"] .auth-intro h1{color:var(--tx)}
+:root[data-theme="light"] .auth-intro p,:root[data-theme="light"] .auth-mark{color:var(--mu)}
+:root[data-theme="light"] .auth-mark span{border-color:var(--ln);color:#b85b00}
+:root[data-theme="light"] .auth-form .card{box-shadow:0 8px 24px #24364d12}
+:root[data-theme="light"] .theme-button{background:#fff;border-color:var(--ln);color:var(--tx)}
+:root[data-theme="light"] .btn{color:#fff}
+:root[data-theme="light"] .btn.y,:root[data-theme="light"] .institution-action-primary{color:#231503}
+:root[data-theme="light"] .pill.pendiente{color:#a72b4d;border-color:#c8104f}
+
+@media(max-width:700px){
+	:root[data-theme="light"] .criticality-grid{grid-template-columns:1fr;gap:12px}
+	:root[data-theme="light"] .criticality-card{min-height:118px;padding:18px;border-radius:12px}
 }
