@@ -252,6 +252,20 @@ class ReportEndpointTests(unittest.TestCase):
         })
         self.assertEqual(data["security"]["state"], "critical")
 
+    def test_findings_overdue_filter_is_pending_and_strictly_over_30_days(self):
+        statements = []
+
+        def capture_rows(sql, *params):
+            statements.append(sql)
+            return []
+
+        with backend.app.test_request_context("/api/findings?status=pendiente&overdue=1"), \
+             patch.object(backend, "rows", side_effect=capture_rows):
+            backend.findings()
+        query = statements[0]
+        self.assertIn("f.status='pendiente' AND CURRENT_DATE - f.inspected_at > 30", query)
+        self.assertIn("f.status=%s", query)
+
     def test_pdf_charts_receive_nonempty_report_data(self):
         status = backend.report_status_chart(3, 2).contents[0]
         self.assertEqual(status.data, [[3, 0], [0, 2]])

@@ -51,9 +51,8 @@ Todas las rutas empiezan con `/api/`. Las que modifican datos exigen el encabeza
 - `vercel.json` incluye explícitamente `public/logo.png` en el paquete de la función Python para que el encabezado PDF conserve el logo al desplegar.
 - El informe individual de un hallazgo solucionado es A4 de una página. Incluye hasta cuatro miniaturas fotográficas; si hay más, el documento informa cuántas quedaron fuera para preservar la legibilidad.
 - El informe ejecutivo incorpora gráficos vectoriales. El esquema actual no registra inspecciones independientes, por lo que su total se muestra como **No registrado** en lugar de inferirse a partir de hallazgos.
-- El dashboard clasifica la gestión como crítica ante hallazgos pendientes de criticidad alta o de más de 30 días; como requiere atención si quedan pendientes, empeoran los flujos o falta historial; y como controlada solo con hallazgos registrados, sin pendientes y con una tendencia estable o positiva.
-- La tendencia compara altas por fecha de detección menos cierres durante los últimos 30 días con el período anterior de 30 días. Requiere al menos 60 días desde el primer registro; no representa una serie histórica de inventario y no permite identificar reaperturas como eventos independientes.
-- Esta clasificación informa sobre la gestión de hallazgos y no certifica que la planta esté libre de riesgos. No requiere cambios de esquema en Neon.
+- El dashboard muestra pendientes, solucionados y riesgo alto con filtros al listado; la alerta de más de 30 días aparece únicamente cuando existen registros que cumplen el criterio.
+- El esquema actual no registra inspecciones independientes, así que el total de inspecciones no puede inferirse con seguridad del total de hallazgos y se muestra como no disponible.
 - El listado de hallazgos recupera únicamente IDs de fotos; las miniaturas y la galería reutilizan `/api/photos/<id>`, que mantiene la autenticación existente.
 
 ## Reglas importantes
