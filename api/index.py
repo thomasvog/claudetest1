@@ -534,7 +534,6 @@ def password():
 @app.get("/api/dashboard")
 @need()
 def dashboard():
-    st = {r["status"]: r["n"] for r in rows("SELECT status, COUNT(*) n FROM findings GROUP BY 1")}
     by_crit = {r["k"]: r["n"] for r in rows("SELECT criticality k, COUNT(*) n FROM findings WHERE status='pendiente' GROUP BY 1")}
     cnt = {r["location_id"]: r["n"] for r in rows("SELECT location_id, COUNT(*) n FROM findings WHERE status='pendiente' GROUP BY 1")}
     ages = one(
@@ -564,7 +563,7 @@ def dashboard():
     if top_photo_ids:
         for photo in rows("SELECT finding_id, id FROM photos WHERE finding_id=ANY(%s) ORDER BY finding_id, id", list(top_photo_ids)):
             top_photo_ids[photo["finding_id"]].append(photo["id"])
-    pending = int(st.get("pendiente", 0))
+    pending = int(summary["pending"])
     by_crit = {c: int(by_crit.get(c, 0)) for c in CRIT}
     history_available = bool(trend["first_inspection"] and trend["first_inspection"] <= date.today() - timedelta(days=60))
     if history_available:
@@ -578,7 +577,7 @@ def dashboard():
         pending, by_crit, int(ages["overdue"]), int(ages["aged_15_30"]),
         int(summary["total"]), history_available, trend_direction, current_net,
     )
-    solved = int(st.get("solucionado", 0))
+    solved = int(summary["solved"])
     average_days = float(summary["average_days"]) if summary["average_days"] is not None else None
     return jsonify(pending=pending, solved=solved, overdue=int(ages["overdue"]),
                    byCrit={c: by_crit.get(c, 0) for c in CRIT},

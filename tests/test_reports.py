@@ -210,8 +210,6 @@ class ReportEndpointTests(unittest.TestCase):
 
     def test_dashboard_returns_realistic_security_metrics_and_trend(self):
         def fake_dashboard_rows(sql, *params):
-            if "SELECT status, COUNT(*) n" in sql:
-                return [{"status": "pendiente", "n": 3}, {"status": "solucionado", "n": 5}]
             if "SELECT criticality k" in sql:
                 return [{"k": "alta", "n": 1}, {"k": "media", "n": 1}, {"k": "baja", "n": 1}]
             if "SELECT location_id, COUNT(*) n" in sql:

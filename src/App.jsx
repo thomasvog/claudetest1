@@ -99,10 +99,17 @@ function TopBar({ user, onLogout }) {
       </aside>
       <div className="workspace">
         <header className="topbar">
-          <button type="button" className="mobile-menu" aria-label="Abrir menú" aria-expanded={open} onClick={() => setOpen(!open)}><span /><span /><span /></button>
           <Link to="/" className="topbar-brand"><img src="/logo.png" alt="Petrocuyo HAZLOC" /></Link>
           <div className="topbar-context"><span>Petrocuyo</span><i>/</i><b>HAZLOC · Inspecciones</b></div>
-          <Link className="btn y topbar-cta" to="/hallazgos/nuevo"><span aria-hidden="true">＋</span> Nuevo hallazgo</Link>
+          <div className="topbar-actions">
+            <Link className="topbar-quick-add" to="/hallazgos/nuevo" aria-label="Cargar nuevo hallazgo" title="Cargar nuevo hallazgo">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+            </Link>
+            <button type="button" className="mobile-menu topbar-menu" aria-label={open ? 'Cerrar menú' : 'Abrir menú'} aria-expanded={open} onClick={() => setOpen(!open)}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+              <span>Menú</span>
+            </button>
+          </div>
         </header>
         <main className="page-content">
           <Routes>
