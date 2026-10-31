@@ -574,10 +574,14 @@ th,td{border-color:var(--ln)}
 	.stat-detail{font-size:13px}
 	.stat-note{font-size:9px}
 	.criticality-panel{padding:22px;border-radius:22px}
-	.criticality-heading{align-items:flex-start;flex-direction:column;gap:4px}
-	.criticality-heading h2{font-size:20px}
-	.criticality-grid{grid-template-columns:1fr;gap:12px}
-	.criticality-card{min-height:118px}
+	.criticality-heading{align-items:baseline;gap:8px;margin-bottom:12px}
+	.criticality-heading h2{font-size:15px}
+	.criticality-heading>span{font-size:10px;white-space:nowrap}
+	.criticality-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+	.criticality-card{min-height:90px;gap:3px;padding:10px;border-radius:12px}
+	.criticality-card>span{font-size:11px}
+	.criticality-card b{font-size:25px}
+	.criticality-card small{font-size:10px;line-height:1.25}
 }
 @media(max-width:390px){
 	.topbar{padding-inline:14px}
@@ -604,7 +608,12 @@ th,td{border-color:var(--ln)}
 	.stat-value{font-size:32px}
 	.stat-detail{font-size:12px}
 	.stat-note{font-size:9px}
-	.criticality-panel{padding:18px}
+	.criticality-panel{padding:12px}
+	.criticality-grid{gap:6px}
+	.criticality-card{min-height:82px;padding:8px;border-radius:10px}
+	.criticality-card>span{font-size:10px}
+	.criticality-card b{font-size:22px}
+	.criticality-card small{font-size:9px}
 }
 @media(min-width:701px){
 	.app-shell.menu-open{grid-template-columns:0 minmax(0,1fr)}
