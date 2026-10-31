@@ -34,21 +34,41 @@ export default function Dashboard() {
           const mx = Math.max(1, ...d.byArea.map((a) => a.n))
           const progress = tot ? Math.round((d.solved * 100) / tot) : 0
           const high = d.byCrit.alta || 0
+          const security = d.security
+          const stateLabels = { critical: 'Situación crítica', attention: 'Requiere atención', controlled: 'Situación controlada' }
+          const trend = d.trend.available
+            ? `Flujo neto últimos 30 días: ${d.trend.currentNet > 0 ? '+' : ''}${d.trend.currentNet}; período anterior: ${d.trend.previousNet > 0 ? '+' : ''}${d.trend.previousNet}.`
+            : 'Tendencia no disponible: se necesitan al menos 60 días de historial registrado.'
           return (
             <>
-              <section className={`priority-panel ${d.overdue || high ? 'is-critical' : 'is-clear'}`} aria-label="Alertas prioritarias">
+              <section className={`priority-panel state-${security.state}`} aria-labelledby="security-status-title">
                 <span className="priority-symbol" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3 22 20H2L12 3Z" /><path d="M12 9v5M12 17h.01" /></svg></span>
-                <div className="priority-copy"><span className="section-kicker">ALERTAS PRIORITARIAS</span><b>{d.overdue || high ? 'Requieren atención' : 'Todo bajo control'}</b><p>{d.overdue ? `${d.overdue} pendiente${d.overdue === 1 ? '' : 's'} con más de 30 días.` : 'No hay pendientes con más de 30 días.'} {high ? `${high} hallazgo${high === 1 ? '' : 's'} de criticidad alta.` : 'Sin hallazgos pendientes de criticidad alta.'}</p></div>
+                <div className="priority-copy">
+                  <span className="section-kicker">SITUACIÓN ACTUAL DE SEGURIDAD</span>
+                  <b id="security-status-title">{stateLabels[security.state]}</b>
+                  <p>{security.message}</p>
+                  {!!security.reasons.length && <ul className="security-reasons">{security.reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>}
+                  <p className="security-disclaimer">Indicador de gestión de hallazgos; no certifica que la planta esté libre de riesgos. {trend}</p>
+                </div>
                 <div className="priority-actions">
-                  {d.overdue > 0 && <Link className="btn alert-action" to="/hallazgos?status=pendiente&overdue=1">Ver vencidos <span aria-hidden="true">→</span></Link>}
-                  {high > 0 && <Link className="btn danger-action" to="/hallazgos?crit=alta&status=pendiente">Ver alta criticidad <span aria-hidden="true">→</span></Link>}
+                  <Link className="btn alert-action" to={security.attentionCount ? '/hallazgos?status=pendiente' : '/hallazgos'}>Consultar hallazgos relacionados <span aria-hidden="true">→</span></Link>
+                </div>
+                <div className="security-metrics" aria-label="Indicadores evaluados">
+                  <Link to="/hallazgos?status=pendiente"><b>{d.pending}</b><span>Pendientes</span></Link>
+                  <Link to="/hallazgos?crit=alta&status=pendiente"><b>{high}</b><span>Alta</span></Link>
+                  <Link to="/hallazgos?crit=media&status=pendiente"><b>{d.byCrit.media}</b><span>Media</span></Link>
+                  <Link to="/hallazgos?crit=baja&status=pendiente"><b>{d.byCrit.baja}</b><span>Baja</span></Link>
+                  <Link to="/hallazgos?status=pendiente&overdue=1"><b>{d.overdue}</b><span>Más de 30 días</span></Link>
+                  <Link to="/hallazgos?status=pendiente"><b>{d.aged15to30}</b><span>15–30 días</span></Link>
+                  <span><b>{d.resolutionRate == null ? '—' : `${d.resolutionRate.toFixed(1)}%`}</b><span>Resolución</span></span>
+                  <span><b>{d.averageResolutionDays == null ? '—' : `${d.averageResolutionDays.toFixed(1)} d`}</b><span>Promedio de solución</span></span>
                 </div>
               </section>
               <div className="stats-grid">
                 <StatCard to="/hallazgos?status=pendiente" tone="orange" icon="pending" label="HALLAZGOS PENDIENTES" value={d.pending} detail="Requieren seguimiento" />
                 <StatCard to="/hallazgos?status=solucionado" tone="green" icon="solved" label="HALLAZGOS SOLUCIONADOS" value={d.solved} detail={tot ? `${progress}% del total registrado` : 'Sin registros todavía'} />
                 <StatCard to="/hallazgos?crit=alta&status=pendiente" tone="red" icon="high" label="RIESGO ALTO" value={high} detail="Pendientes de criticidad alta" />
-                <StatCard to="/hallazgos" tone="blue" icon="total" label="TOTAL DE HALLAZGOS" value={tot} detail="Registros de inspección" />
+                <StatCard to="/hallazgos" tone="blue" icon="total" label="TOTAL DE HALLAZGOS" value={tot} detail="Registros de hallazgos" />
               </div>
               <div className="section-heading dashboard-section-title"><div><span className="section-kicker">PRIORIZACIÓN</span><h2>Pendientes por criticidad</h2></div></div>
               <div className="tiles">

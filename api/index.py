@@ -7,7 +7,7 @@ import os
 import re
 import secrets
 import unicodedata
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from functools import wraps
 from pathlib import Path
 from xml.sax.saxutils import escape
@@ -26,7 +26,7 @@ from reportlab.lib.enums import TA_LEFT, TA_RIGHT
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
-from reportlab.platypus import HRFlowable, Image as PDFImage, LongTable, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import HRFlowable, Image as PDFImage, KeepInFrame, LongTable, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 from werkzeug.security import check_password_hash, generate_password_hash
 
 
@@ -537,15 +537,93 @@ def dashboard():
     st = {r["status"]: r["n"] for r in rows("SELECT status, COUNT(*) n FROM findings GROUP BY 1")}
     by_crit = {r["k"]: r["n"] for r in rows("SELECT criticality k, COUNT(*) n FROM findings WHERE status='pendiente' GROUP BY 1")}
     cnt = {r["location_id"]: r["n"] for r in rows("SELECT location_id, COUNT(*) n FROM findings WHERE status='pendiente' GROUP BY 1")}
-    old = one("SELECT COUNT(*) n FROM findings WHERE status='pendiente' AND CURRENT_DATE - inspected_at > 30")["n"]
+    ages = one(
+        "SELECT COUNT(*) FILTER (WHERE CURRENT_DATE-inspected_at > 30) overdue, "
+        "COUNT(*) FILTER (WHERE CURRENT_DATE-inspected_at BETWEEN 15 AND 30) aged_15_30 "
+        "FROM findings WHERE status='pendiente'"
+    )
+    trend = one(
+        "SELECT MIN(inspected_at) first_inspection, "
+        "COUNT(*) FILTER (WHERE inspected_at > CURRENT_DATE-30) opened_current, "
+        "COUNT(*) FILTER (WHERE inspected_at > CURRENT_DATE-60 AND inspected_at <= CURRENT_DATE-30) opened_previous, "
+        "COUNT(*) FILTER (WHERE closed_at > CURRENT_DATE-30) closed_current, "
+        "COUNT(*) FILTER (WHERE closed_at > CURRENT_DATE-60 AND closed_at <= CURRENT_DATE-30) closed_previous "
+        "FROM findings"
+    )
+    summary = one(
+        "SELECT COUNT(*) total, "
+        "COUNT(*) FILTER (WHERE status='pendiente') pending, "
+        "COUNT(*) FILTER (WHERE status='solucionado') solved, "
+        "AVG(closed_at-inspected_at) FILTER (WHERE status='solucionado' AND closed_at IS NOT NULL) average_days "
+        "FROM findings"
+    )
     ls, paths = locs()
     top = rows("SELECT id, tag, zone, criticality, location_id, inspected_at, description, ot FROM findings WHERE status='pendiente' "
                "ORDER BY CASE criticality WHEN 'alta' THEN 0 WHEN 'media' THEN 1 ELSE 2 END, inspected_at LIMIT 8")
-    return jsonify(pending=st.get("pendiente", 0), solved=st.get("solucionado", 0), overdue=old,
+    top_photo_ids = {r["id"]: [] for r in top}
+    if top_photo_ids:
+        for photo in rows("SELECT finding_id, id FROM photos WHERE finding_id=ANY(%s) ORDER BY finding_id, id", list(top_photo_ids)):
+            top_photo_ids[photo["finding_id"]].append(photo["id"])
+    pending = int(st.get("pendiente", 0))
+    by_crit = {c: int(by_crit.get(c, 0)) for c in CRIT}
+    history_available = bool(trend["first_inspection"] and trend["first_inspection"] <= date.today() - timedelta(days=60))
+    if history_available:
+        current_net = int(trend["opened_current"]) - int(trend["closed_current"])
+        previous_net = int(trend["opened_previous"]) - int(trend["closed_previous"])
+        trend_direction = "worsening" if current_net > previous_net else "improving" if current_net < previous_net else "stable"
+    else:
+        current_net = previous_net = None
+        trend_direction = "insufficient"
+    assessment = security_assessment(
+        pending, by_crit, int(ages["overdue"]), int(ages["aged_15_30"]),
+        int(summary["total"]), history_available, trend_direction, current_net,
+    )
+    solved = int(st.get("solucionado", 0))
+    average_days = float(summary["average_days"]) if summary["average_days"] is not None else None
+    return jsonify(pending=pending, solved=solved, overdue=int(ages["overdue"]),
                    byCrit={c: by_crit.get(c, 0) for c in CRIT},
                    byArea=[{"id": i, "name": n, "color": AREA_COLORS[AREAS.index(n)] if n in AREAS else "#888888", "n": cnt.get(i, 0)} for i, n, _ in ls],
+                   total=int(summary["total"]), resolutionRate=(solved * 100 / int(summary["total"])) if summary["total"] else None,
+                   averageResolutionDays=average_days, aged15to30=int(ages["aged_15_30"]),
+                   trend={"available": history_available, "direction": trend_direction, "currentNet": current_net, "previousNet": previous_net},
+                   security=assessment,
                    urgent=[{"id": r["id"], "tag": r["tag"] or "", "zone": r["zone"], "crit": r["criticality"], "area": paths.get(r["location_id"], ""),
-                            "date": iso(r["inspected_at"]), "description": r["description"], "ot": r["ot"] or ""} for r in top])
+                            "date": iso(r["inspected_at"]), "description": r["description"], "ot": r["ot"] or "",
+                            "photoIds": top_photo_ids[r["id"]]} for r in top])
+
+
+def security_assessment(pending, by_crit, overdue, aged_15_30, total, history_available, trend_direction, current_net):
+    """Evalúa la gestión registrada; no certifica que la planta esté libre de riesgos."""
+    high = int(by_crit.get("alta", 0))
+    reasons = []
+    if high:
+        reasons.append("Hay hallazgos pendientes de criticidad alta que requieren intervención prioritaria.")
+    if overdue:
+        reasons.append("Hay hallazgos pendientes con más de 30 días de antigüedad.")
+    if high or overdue or (trend_direction == "worsening" and current_net is not None and current_net > 0):
+        state = "critical"
+        message = "La gestión requiere intervención prioritaria por los indicadores críticos registrados."
+    elif pending or aged_15_30 or trend_direction == "worsening":
+        state = "attention"
+        message = "Existen pendientes o indicadores que requieren seguimiento."
+    elif not total:
+        state = "attention"
+        message = "No hay hallazgos registrados; la ausencia de registros no permite evaluar la gestión."
+    elif not history_available:
+        state = "attention"
+        message = "No hay 60 días de historial registrado para evaluar la tendencia."
+    else:
+        state = "controlled"
+        message = "Los indicadores registrados muestran una gestión favorable y una evolución estable o positiva."
+    if aged_15_30:
+        reasons.append("Hay hallazgos pendientes con una antigüedad de 15 a 30 días.")
+    if pending and not high and not overdue:
+        reasons.append("Hay hallazgos pendientes que requieren seguimiento.")
+    if trend_direction == "worsening":
+        reasons.append("El flujo neto de altas y cierres empeoró respecto de los 30 días anteriores.")
+    if not history_available:
+        reasons.append("Tendencia no disponible: se necesitan al menos 60 días de historial.")
+    return {"state": state, "message": message, "reasons": reasons, "attentionCount": int(pending)}
 
 
 # ---------- hallazgos ----------
@@ -581,7 +659,18 @@ def findings_by_id(fid):
 def findings_list():
     paths = locs()[1]
     items = findings()
-    return jsonify(total=len(items), items=[fjson(f, paths) for f in items[:1000]])
+    visible = items[:1000]
+    ids = [f["id"] for f in visible]
+    photo_map = {fid: [] for fid in ids}
+    if ids:
+        for photo in rows("SELECT finding_id, id FROM photos WHERE finding_id=ANY(%s) ORDER BY finding_id, id", ids):
+            photo_map[photo["finding_id"]].append(photo["id"])
+    result = []
+    for finding in visible:
+        item = fjson(finding, paths)
+        item["photoIds"] = photo_map[finding["id"]]
+        result.append(item)
+    return jsonify(total=len(items), items=result)
 
 
 @app.get("/api/findings/export.xlsx")
@@ -818,7 +907,7 @@ def pdf_logo_data(path):
     return data
 
 
-def make_report_pdf(title, content, wide=False, generated=None):
+def make_report_pdf(title, content, wide=False, generated=None, single_page=False):
     generated = generated or pdf_generated_at()
     pagesize = landscape(A4) if wide else A4
     buf = io.BytesIO()
@@ -844,6 +933,9 @@ def make_report_pdf(title, content, wide=False, generated=None):
              pdf_labeled("Fecha y hora de generación", generated, styles["muted"]),
              HRFlowable(width="100%", thickness=1.2, color=PDF_ORANGE, spaceBefore=2 * mm, spaceAfter=4 * mm)] + content
     draw = lambda canvas, page: pdf_page(canvas, page, generated)
+    if single_page:
+        available = pagesize[0] - doc.leftMargin - doc.rightMargin
+        story = [KeepInFrame(available, doc.height, story, mode="shrink")]
     doc.build(story, onFirstPage=draw, onLaterPages=draw)
     buf.seek(0)
     return buf
@@ -970,33 +1062,63 @@ def finding_report_pdf(fid):
         return err("Solo se pueden generar informes de hallazgos solucionados.", 409)
     generated = pdf_generated_at()
     styles = pdf_styles()
-    story = [pdf_labeled("Código identificador", report_code(finding), styles["body"]),
-             pdf_labeled("Fecha de detección", finding.get("inspected_at"), styles["body"]),
-             pdf_labeled("Fecha de solución", finding.get("closed_at"), styles["body"]),
-             pdf_labeled("Área o sector", finding.get("area"), styles["body"]),
-             pdf_labeled("Descripción del hallazgo", finding.get("description"), styles["body"]),
-             pdf_labeled("Nivel de criticidad", str(finding.get("criticality") or "").capitalize(), styles["body"]),
-             pdf_labeled("Riesgo identificado", None, styles["body"]),
-             pdf_labeled("Acción correctiva implementada", finding.get("resolution"), styles["body"]),
-             pdf_labeled("Responsable de la solución", finding.get("closer"), styles["body"]),
-             pdf_labeled("Usuario que registró el hallazgo", finding.get("inspector"), styles["body"]),
-             pdf_labeled("Observaciones y comentarios", None, styles["body"]),
-             pdf_labeled("Estado final", "SOLUCIONADO", styles["body"]),
-             Paragraph("Evidencias fotográficas", styles["section"])]
-    if not photos:
-        story.append(pdf_paragraph("No registrado", styles["body"]))
-    for photo in photos:
-        story.append(pdf_labeled("Estado", "Antes" if photo["kind"] == "antes" else "Después", styles["small"]))
+    data_rows = [
+        [pdf_labeled("Código identificador", report_code(finding), styles["small"]),
+         pdf_labeled("Criticidad", str(finding.get("criticality") or "").capitalize(), styles["small"])],
+        [pdf_labeled("Fecha de detección", finding.get("inspected_at"), styles["small"]),
+         pdf_labeled("Fecha de solución", finding.get("closed_at"), styles["small"])],
+        [pdf_labeled("Área o sector", finding.get("area"), styles["small"]),
+         pdf_labeled("Responsable de la solución", finding.get("closer"), styles["small"])],
+        [pdf_labeled("Riesgo identificado", None, styles["small"]),
+         pdf_labeled("Estado final", "SOLUCIONADO", styles["small"])],
+    ]
+    metadata = Table(data_rows, colWidths=[(A4[0] - 32 * mm) / 2] * 2)
+    metadata.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F3F5F8")),
+        ("BOX", (0, 0), (-1, -1), 0.4, PDF_LINE),
+        ("INNERGRID", (0, 0), (-1, -1), 0.3, PDF_LINE),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 6), ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+        ("TOPPADDING", (0, 0), (-1, -1), 4), ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+    ]))
+    story = [
+        metadata, Spacer(1, 2 * mm),
+        pdf_labeled("Descripción del hallazgo", finding.get("description"), styles["body"]),
+        pdf_labeled("Acción correctiva implementada", finding.get("resolution"), styles["body"]),
+        pdf_labeled("Observaciones", None, styles["body"]),
+        pdf_labeled("Usuario que registró el hallazgo", finding.get("inspector"), styles["small"]),
+        Paragraph("Evidencias fotográficas", styles["section"]),
+    ]
+    thumbnails = []
+    for photo in photos[:4]:
         try:
             image_data = bytes(photo["data"])
             with Image.open(io.BytesIO(image_data)) as image:
-                original_width, original_height = image.size
-            scale = min((165 * mm) / original_width, (105 * mm) / original_height, 1)
-            story.extend([PDFImage(io.BytesIO(image_data), width=original_width * scale, height=original_height * scale), Spacer(1, 2 * mm)])
+                image.verify()
+            image = PDFImage(io.BytesIO(image_data), width=39 * mm, height=25 * mm, kind="proportional")
+            thumbnails.append(Table([[Paragraph("Antes" if photo["kind"] == "antes" else "Después", styles["small"]), image]],
+                                    colWidths=[26 * mm, 43 * mm]))
         except (OSError, ValueError, TypeError):
-            story.append(pdf_paragraph("Evidencia no disponible.", styles["muted"]))
+            thumbnails.append(pdf_paragraph("Evidencia no disponible.", styles["muted"]))
+    if thumbnails:
+        if len(thumbnails) % 2:
+            thumbnails.append(Paragraph("", styles["small"]))
+        photo_rows = [[thumbnails[i], thumbnails[i + 1]] for i in range(0, len(thumbnails), 2)]
+        photo_table = Table(photo_rows, colWidths=[(A4[0] - 32 * mm) / 2] * 2)
+        photo_table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F8F9FB")),
+            ("BOX", (0, 0), (-1, -1), 0.4, PDF_LINE), ("INNERGRID", (0, 0), (-1, -1), 0.3, PDF_LINE),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 5), ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+            ("TOPPADDING", (0, 0), (-1, -1), 3), ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+        ]))
+        story.append(photo_table)
+        if len(photos) > 4:
+            story.append(pdf_paragraph("Se muestran 4 de %s fotografías adjuntas." % len(photos), styles["muted"]))
+    else:
+        story.append(pdf_paragraph("No hay fotografías adjuntas." if not photos else "No se pudieron leer las fotografías adjuntas.", styles["muted"]))
     filename = "hallazgo-%s-solucionado.pdf" % fid
-    return pdf_download(make_report_pdf("INFORME DE HALLAZGO SOLUCIONADO", story, generated=generated), filename)
+    return pdf_download(make_report_pdf("INFORME DE HALLAZGO SOLUCIONADO", story, generated=generated, single_page=True), filename)
 
 
 @app.get("/api/reports/pending.pdf")
@@ -1100,6 +1222,7 @@ def report_kpi_data():
     summary = one("SELECT COUNT(*) total, COUNT(*) FILTER (WHERE status='pendiente') pending, "
                   "COUNT(*) FILTER (WHERE status='solucionado') solved, "
                   "COUNT(*) FILTER (WHERE status='pendiente' AND CURRENT_DATE - inspected_at > 30) overdue, "
+                  "COUNT(*) FILTER (WHERE status='pendiente' AND CURRENT_DATE - inspected_at BETWEEN 15 AND 30) aged_15_30, "
                   "AVG(closed_at - inspected_at) FILTER (WHERE status='solucionado' AND closed_at IS NOT NULL) average_days "
                   "FROM findings")
     criticality = rows("SELECT criticality, COUNT(*) count FROM findings GROUP BY criticality "
@@ -1140,6 +1263,7 @@ def executive_report_content(data):
         ("Criticidad media", critical_counts.get("media", 0), "Hallazgos de criticidad media, cualquiera sea su estado."),
         ("Criticidad baja", critical_counts.get("baja", 0), "Hallazgos de criticidad baja, cualquiera sea su estado."),
         ("Pendientes con más de 30 días", int(summary["overdue"]), "Pendientes con CURRENT_DATE - inspected_at > 30."),
+        ("Pendientes de 15 a 30 días", int(summary["aged_15_30"]), "Pendientes con antigüedad entre 15 y 30 días, inclusive."),
         ("Tiempo promedio de resolución", "%.1f días" % average if average is not None else "No registrado", "AVG(closed_at - inspected_at) para solucionados con ambas fechas."),
     ]
     table_data = [[pdf_paragraph("Indicador", styles["table_head"]), pdf_paragraph("Resultado", styles["table_head"]),

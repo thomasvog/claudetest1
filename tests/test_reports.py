@@ -1,5 +1,8 @@
+import base64
 import io
+import re
 import unittest
+import zlib
 from contextlib import nullcontext
 from datetime import date, timedelta
 from unittest.mock import patch
@@ -102,7 +105,29 @@ class ReportEndpointTests(unittest.TestCase):
     def fake_one(self, sql, *params):
         if "WHERE f.id=%s" in sql:
             return finding("solucionado", params[0])
-        return {"total": 3, "pending": 1, "solved": 2, "overdue": 1, "average_days": 5.0}
+        return {"total": 3, "pending": 1, "solved": 2, "overdue": 1, "aged_15_30": 1, "average_days": 5.0}
+
+    def assert_pdf_response(self, response):
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.mimetype, "application/pdf")
+        self.assertTrue(response.data.startswith(b"%PDF-"))
+        self.assertTrue(response.data.rstrip().endswith(b"%%EOF"))
+        self.assertIn(b"/Width 407", response.data)
+        self.assertIn(b"/Height 132", response.data)
+
+    def decoded_pdf_streams(self, pdf):
+        decoded = []
+        for match in re.finditer(rb"stream\r?\n(.*?)endstream", pdf, re.S):
+            stream = match.group(1).rstrip(b"\r\n")
+            try:
+                stream = base64.a85decode(stream.rstrip(b"~>"), adobe=False)
+            except ValueError:
+                pass
+            try:
+                decoded.append(zlib.decompress(stream))
+            except zlib.error:
+                decoded.append(stream)
+        return decoded
 
     def test_individual_pdf_is_available_to_each_authenticated_role(self):
         with patch.object(backend, "db", return_value=ReadOnlyDatabase()), \
@@ -111,10 +136,26 @@ class ReportEndpointTests(unittest.TestCase):
             for role in ("tecnico", "supervisor", "admin"):
                 with self.subTest(role=role):
                     response = self.client_for(role).get("/api/reports/findings/41.pdf")
-                    self.assertEqual(response.status_code, 200)
-                    self.assertTrue(response.data.startswith(b"%PDF-"))
+                    self.assert_pdf_response(response)
                     self.assertIn("hallazgo-41-solucionado.pdf", response.headers["Content-Disposition"])
                     self.assertEqual(response.headers["Cache-Control"], "private, no-store")
+                    self.assertEqual(len(re.findall(rb"/Type\s*/Page\b", response.data)), 1)
+
+    def test_long_individual_pdf_stays_on_one_a4_page(self):
+        record = finding("solucionado")
+        record["description"] = "Descripción extensa del hallazgo. " * 120
+        record["resolution"] = "Acción correctiva detallada. " * 100
+        photos = [{"id": n, "kind": "antes" if n % 2 else "despues", "data": image_bytes()} for n in range(1, 13)]
+        with patch.object(backend, "db", return_value=ReadOnlyDatabase()), \
+             patch.object(backend, "one", return_value=record), \
+             patch.object(backend, "rows", return_value=photos):
+            response = self.client_for("tecnico").get("/api/reports/findings/41.pdf")
+        self.assert_pdf_response(response)
+        self.assertEqual(len(re.findall(rb"/Type\s*/Page\b", response.data)), 1)
+        box = re.search(rb"/MediaBox\s*\[\s*0\s+0\s+([\d.]+)\s+([\d.]+)\s*\]", response.data)
+        self.assertIsNotNone(box)
+        self.assertAlmostEqual(float(box.group(1)), 595.28, delta=0.1)
+        self.assertAlmostEqual(float(box.group(2)), 841.89, delta=0.1)
 
     def test_individual_pdf_rejects_pending_finding(self):
         with patch.object(backend, "db", return_value=ReadOnlyDatabase()), \
@@ -136,8 +177,139 @@ class ReportEndpointTests(unittest.TestCase):
                 for role in ("supervisor", "admin"):
                     with self.subTest(endpoint=endpoint, role=role):
                         response = self.client_for(role).get(path)
-                        self.assertEqual(response.status_code, 200)
-                        self.assertTrue(response.data.startswith(b"%PDF-"))
+                        self.assert_pdf_response(response)
+                        self.assertGreater(len(response.data), 2500)
+
+    def test_security_assessment_uses_explicit_data_and_history(self):
+        critical = backend.security_assessment(
+            2, {"alta": 1, "media": 1, "baja": 0}, 0, 1, 4, True, "improving", -2,
+        )
+        self.assertEqual(critical["state"], "critical")
+        self.assertEqual(critical["attentionCount"], 2)
+
+        overdue = backend.security_assessment(
+            1, {"alta": 0, "media": 0, "baja": 1}, 1, 0, 4, True, "improving", -1,
+        )
+        self.assertEqual(overdue["state"], "critical")
+
+        attention = backend.security_assessment(
+            1, {"alta": 0, "media": 0, "baja": 1}, 0, 0, 2, True, "stable", 0,
+        )
+        self.assertEqual(attention["state"], "attention")
+
+        no_data = backend.security_assessment(
+            0, {"alta": 0, "media": 0, "baja": 0}, 0, 0, 0, False, "insufficient", None,
+        )
+        self.assertEqual(no_data["state"], "attention")
+        self.assertIn("ausencia de registros", no_data["message"])
+
+        controlled = backend.security_assessment(
+            0, {"alta": 0, "media": 0, "baja": 0}, 0, 0, 3, True, "stable", 0,
+        )
+        self.assertEqual(controlled["state"], "controlled")
+
+    def test_dashboard_returns_realistic_security_metrics_and_trend(self):
+        def fake_dashboard_rows(sql, *params):
+            if "SELECT status, COUNT(*) n" in sql:
+                return [{"status": "pendiente", "n": 3}, {"status": "solucionado", "n": 5}]
+            if "SELECT criticality k" in sql:
+                return [{"k": "alta", "n": 1}, {"k": "media", "n": 1}, {"k": "baja", "n": 1}]
+            if "SELECT location_id, COUNT(*) n" in sql:
+                return [{"location_id": 1, "n": 3}]
+            if "SELECT id, name FROM locations" in sql:
+                return [{"id": 1, "name": "Polímeros"}]
+            if "SELECT id, tag, zone, criticality" in sql:
+                return []
+            raise AssertionError("Consulta inesperada del dashboard")
+
+        def fake_dashboard_one(sql, *params):
+            if "aged_15_30" in sql:
+                self.assertIn("BETWEEN 15 AND 30", sql)
+                return {"overdue": 1, "aged_15_30": 2}
+            if "first_inspection" in sql:
+                return {
+                    "first_inspection": date.today() - timedelta(days=90),
+                    "opened_current": 3, "opened_previous": 1,
+                    "closed_current": 1, "closed_previous": 2,
+                }
+            if "average_days" in sql:
+                return {"total": 8, "pending": 3, "solved": 5, "average_days": 4.5}
+            raise AssertionError("Resumen inesperado del dashboard")
+
+        with patch.object(backend, "db", return_value=ReadOnlyDatabase()), \
+             patch.object(backend, "rows", side_effect=fake_dashboard_rows), \
+             patch.object(backend, "one", side_effect=fake_dashboard_one):
+            response = self.client_for("tecnico").get("/api/dashboard")
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertEqual(data["pending"], 3)
+        self.assertEqual(data["overdue"], 1)
+        self.assertEqual(data["aged15to30"], 2)
+        self.assertEqual(data["resolutionRate"], 62.5)
+        self.assertEqual(data["averageResolutionDays"], 4.5)
+        self.assertEqual(data["trend"], {
+            "available": True, "direction": "worsening", "currentNet": 2, "previousNet": -1,
+        })
+        self.assertEqual(data["security"]["state"], "critical")
+
+    def test_pdf_charts_receive_nonempty_report_data(self):
+        status = backend.report_status_chart(3, 2).contents[0]
+        self.assertEqual(status.data, [[3, 0], [0, 2]])
+
+        criticality = backend.report_criticality_chart(["Alta", "Media"], [2, 1]).contents[0]
+        self.assertEqual(criticality.data, [2, 1])
+
+        areas = backend.report_area_chart([{"area": "Polímeros", "count": 3}]).contents[0]
+        self.assertEqual(areas.data, [[3]])
+
+        self.assertIsNone(backend.report_month_chart([("2026-10", 0)]))
+
+    def test_executive_pdf_contains_rendered_vector_graphs(self):
+        with patch.object(backend, "db", return_value=ReadOnlyDatabase()), \
+             patch.object(backend, "one", side_effect=self.fake_one), \
+             patch.object(backend, "rows", side_effect=self.fake_rows):
+            response = self.client_for("supervisor").get("/api/reports/executive.pdf")
+        self.assert_pdf_response(response)
+        self.assertGreaterEqual(len(re.findall(rb"/Type\s*/Page\b", response.data)), 2)
+        streams = self.decoded_pdf_streams(response.data)
+        self.assertTrue(any(stream.count(b" l") > 10 for stream in streams))
+
+    def test_findings_list_includes_zero_one_and_multiple_photo_ids(self):
+        record = {
+            "id": 41, "tag": "HAZ-041", "equipment_id": None, "location_id": 1, "zone": "1",
+            "protection": None, "criticality": "media", "status": "pendiente", "finding_type": "Deterioro",
+            "description": "Descripción", "ot": None, "inspected_at": date.today(),
+            "inspector": "Inspector", "closer": None, "closed_at": None, "resolution": None,
+        }
+        photo_rows = [
+            {"finding_id": 41, "id": 7},
+            {"finding_id": 41, "id": 8},
+            {"finding_id": 41, "id": 9},
+        ]
+
+        def fake_list_rows(sql, *params):
+            if "FROM locations" in sql:
+                return [{"id": 1, "name": "Polímeros"}]
+            if "WHERE finding_id=ANY" in sql:
+                return photo_rows
+            return [record]
+
+        with patch.object(backend, "db", return_value=ReadOnlyDatabase()), patch.object(backend, "rows", side_effect=fake_list_rows):
+            response = self.client_for("tecnico").get("/api/findings")
+        self.assertEqual(response.status_code, 200)
+        item = response.get_json()["items"][0]
+        self.assertEqual(item["photoIds"], [7, 8, 9])
+        self.assertNotIn("data", item)
+
+        photo_rows.clear()
+        with patch.object(backend, "db", return_value=ReadOnlyDatabase()), patch.object(backend, "rows", side_effect=fake_list_rows):
+            response = self.client_for("tecnico").get("/api/findings")
+        self.assertEqual(response.get_json()["items"][0]["photoIds"], [])
+
+        photo_rows.append({"finding_id": 41, "id": 10})
+        with patch.object(backend, "db", return_value=ReadOnlyDatabase()), patch.object(backend, "rows", side_effect=fake_list_rows):
+            response = self.client_for("tecnico").get("/api/findings")
+        self.assertEqual(response.get_json()["items"][0]["photoIds"], [10])
 
 
 if __name__ == "__main__":

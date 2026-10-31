@@ -117,14 +117,67 @@ export function Gallery({ ids, base, onDelete }) {
   )
 }
 
-export const FindingCard = ({ f }) => (
-  <Link to={`/hallazgos/${f.id}`} className={`it ${f.status === 'solucionado' ? 'solucionado' : f.crit}`}>
-    <div className="l1">
-      <b className="tag">{f.tag || `#${f.id}`}</b>
-      <span><Pill kind={f.crit}>{f.crit}</Pill> <Pill kind={f.status}>{f.status}</Pill></span>
+function FindingPhotoViewer({ f, ids, index, setIndex, onClose }) {
+  const [failed, setFailed] = useState(false)
+  useEffect(() => {
+    setFailed(false)
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') onClose()
+      if (event.key === 'ArrowLeft') setIndex((index + ids.length - 1) % ids.length)
+      if (event.key === 'ArrowRight') setIndex((index + 1) % ids.length)
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [f.id, ids.length, index, onClose, setIndex])
+  const photoUrl = `/api/photos/${ids[index]}`
+  return (
+    <div className="photo-viewer-backdrop" onClick={(event) => { if (event.target === event.currentTarget) onClose() }}>
+      <section className="photo-viewer" role="dialog" aria-modal="true" aria-label={`Fotografías del hallazgo ${f.tag || f.id}`}>
+        <div className="photo-viewer-header">
+          <b>{f.tag || `Hallazgo #${f.id}`}</b>
+          <button type="button" className="btn l sm" onClick={onClose} aria-label="Cerrar fotografías">Cerrar ×</button>
+        </div>
+        <div className="photo-viewer-image">
+          {failed
+            ? <p role="status">No se pudo cargar esta fotografía. Verificá el acceso y la conexión.</p>
+            : <img src={photoUrl} alt={`Fotografía ${index + 1} de ${ids.length}`} onError={() => setFailed(true)} />}
+        </div>
+        <div className="photo-viewer-footer">
+          <button type="button" className="btn l sm" onClick={() => setIndex((index + ids.length - 1) % ids.length)} disabled={ids.length < 2}>← Anterior</button>
+          <span>{index + 1} / {ids.length}</span>
+          <button type="button" className="btn l sm" onClick={() => setIndex((index + 1) % ids.length)} disabled={ids.length < 2}>Siguiente →</button>
+          <Link className="btn y sm" to={`/hallazgos/${f.id}`}>Abrir detalle completo</Link>
+        </div>
+      </section>
     </div>
-    <div className="mu l2">{f.area} · Zona {f.zone}{f.protection ? ` · ${f.protection}` : ''}{f.ot ? ` · OT ${f.ot}` : ''}</div>
-    <div>{f.description}</div>
-    <div className="mu l2">{fmtDate(f.date)}{f.inspector ? ` · ${f.inspector}` : ''}</div>
-  </Link>
-)
+  )
+}
+
+export const FindingCard = ({ f }) => {
+  const [photoIndex, setPhotoIndex] = useState(null)
+  const [photoError, setPhotoError] = useState(false)
+  const photoIds = f.photoIds || []
+  useEffect(() => { setPhotoError(false) }, [photoIds[0]])
+  return (
+    <article className={`it finding-card ${f.status === 'solucionado' ? 'solucionado' : f.crit}`}>
+      <Link to={`/hallazgos/${f.id}`} className="finding-card-link">
+        <div className="l1">
+          <b className="tag">{f.tag || `#${f.id}`}</b>
+          <span><Pill kind={f.crit}>{f.crit}</Pill> <Pill kind={f.status}>{f.status}</Pill></span>
+        </div>
+        <div className="mu l2">{f.area} · Zona {f.zone}{f.protection ? ` · ${f.protection}` : ''}{f.ot ? ` · OT ${f.ot}` : ''}</div>
+        <div>{f.description}</div>
+        <div className="mu l2">{fmtDate(f.date)}{f.inspector ? ` · ${f.inspector}` : ''}</div>
+      </Link>
+      {photoIds.length
+        ? <button type="button" className="finding-photo-button" onClick={() => setPhotoIndex(0)} aria-label={`Ver fotografías del hallazgo ${f.tag || f.id}`}>
+            {photoError
+              ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-label="Fotografía no disponible"><rect x="3" y="4" width="18" height="16" rx="2" /><path d="m21 15-5-5L5 20" /></svg>
+              : <img src={`/api/photos/${photoIds[0]}`} alt="" loading="lazy" onError={() => setPhotoError(true)} />}
+            {photoIds.length > 1 && <span className="finding-photo-count">+{photoIds.length - 1}</span>}
+          </button>
+        : <span className="finding-photo-empty" aria-label="Sin fotografías"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="8.5" cy="9" r="1.5" /><path d="m21 15-5-5L5 20" /></svg></span>}
+      {photoIndex !== null && <FindingPhotoViewer f={f} ids={photoIds} index={photoIndex} setIndex={setPhotoIndex} onClose={() => setPhotoIndex(null)} />}
+    </article>
+  )
+}
