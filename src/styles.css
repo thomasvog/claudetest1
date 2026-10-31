@@ -616,7 +616,7 @@ th,td{border-color:var(--ln)}
 	.criticality-card small{font-size:9px}
 }
 @media(min-width:701px){
-	.app-shell.menu-open{grid-template-columns:0 minmax(0,1fr)}
+	.app-shell.menu-open{grid-template-columns:minmax(0,1fr)}
 	.app-shell.menu-open .sidebar{display:none}
 	.app-shell.menu-open .nav-backdrop{display:none}
 }
