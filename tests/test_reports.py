@@ -50,9 +50,9 @@ def finding(status="solucionado", finding_id=41):
     }
 
 
-def image_bytes():
+def image_bytes(size=(40, 30)):
     buf = io.BytesIO()
-    Image.new("RGB", (40, 30), (20, 80, 60)).save(buf, format="JPEG")
+    Image.new("RGB", size, (20, 80, 60)).save(buf, format="JPEG")
     return buf.getvalue()
 
 
@@ -147,7 +147,8 @@ class ReportEndpointTests(unittest.TestCase):
         record = finding("solucionado")
         record["description"] = "Descripción extensa del hallazgo. " * 120
         record["resolution"] = "Acción correctiva detallada. " * 100
-        photos = [{"id": n, "kind": "antes" if n % 2 else "despues", "data": image_bytes()} for n in range(1, 13)]
+        photos = [{"id": n, "kind": "antes" if n % 2 else "despues",
+                   "data": image_bytes((30, 40)) if n % 2 else image_bytes()} for n in range(1, 13)]
         with patch.object(backend, "db", return_value=ReadOnlyDatabase()), \
              patch.object(backend, "one", return_value=record), \
              patch.object(backend, "rows", return_value=photos):
@@ -158,6 +159,12 @@ class ReportEndpointTests(unittest.TestCase):
         self.assertIsNotNone(box)
         self.assertAlmostEqual(float(box.group(1)), 595.28, delta=0.1)
         self.assertAlmostEqual(float(box.group(2)), 841.89, delta=0.1)
+
+    def test_portrait_photo_frame_is_taller_than_landscape(self):
+        landscape_frame = backend.report_photo_max_size(40, 30)
+        portrait_frame = backend.report_photo_max_size(30, 40)
+        self.assertEqual(portrait_frame[0], landscape_frame[0])
+        self.assertGreater(portrait_frame[1], landscape_frame[1])
 
     def test_individual_pdf_rejects_pending_finding(self):
         with patch.object(backend, "db", return_value=ReadOnlyDatabase()), \

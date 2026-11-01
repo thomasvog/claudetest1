@@ -22,7 +22,7 @@ from reportlab.graphics.charts.barcharts import HorizontalBarChart, VerticalBarC
 from reportlab.graphics.charts.piecharts import Pie
 from reportlab.graphics.shapes import Drawing
 from reportlab.lib import colors
-from reportlab.lib.enums import TA_LEFT, TA_RIGHT
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
@@ -1050,6 +1050,10 @@ def report_list_pdf(status, title, filename):
     return pdf_download(make_report_pdf(title, content, wide=True, generated=generated), filename)
 
 
+def report_photo_max_size(width, height):
+    return (84 * mm, 100 * mm) if height > width else (84 * mm, 63 * mm)
+
+
 @app.get("/api/reports/findings/<int:fid>.pdf")
 @need()
 def finding_report_pdf(fid):
@@ -1091,13 +1095,16 @@ def finding_report_pdf(fid):
         Paragraph("Evidencias fotográficas", styles["section"]),
     ]
     thumbnails = []
+    photo_label_style = ParagraphStyle("ReportPhotoLabel", parent=styles["small"], alignment=TA_CENTER)
     for photo in photos[:4]:
         try:
             image_data = bytes(photo["data"])
             with Image.open(io.BytesIO(image_data)) as image:
+                photo_width, photo_height = image.size
                 image.verify()
-            image = PDFImage(io.BytesIO(image_data), width=84 * mm, height=63 * mm, kind="proportional")
-            thumbnail = Table([[image], [Paragraph("Antes" if photo["kind"] == "antes" else "Después", styles["small"])]],
+            frame_width, frame_height = report_photo_max_size(photo_width, photo_height)
+            image = PDFImage(io.BytesIO(image_data), width=frame_width, height=frame_height, kind="proportional")
+            thumbnail = Table([[image], [Paragraph("Antes" if photo["kind"] == "antes" else "Después", photo_label_style)]],
                               colWidths=[85 * mm])
             thumbnail.setStyle(TableStyle([
                 ("ALIGN", (0, 0), (-1, -1), "CENTER"),
