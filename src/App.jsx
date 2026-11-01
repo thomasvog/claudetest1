@@ -44,9 +44,14 @@ function useTheme() {
   const [theme, setTheme] = useState(eff)
   const toggle = () => {
     const n = theme === 'dark' ? 'light' : 'dark'
-    document.documentElement.setAttribute('data-theme', n)
-    try { localStorage.setItem('theme', n) } catch { /* sin almacenamiento */ }
-    setTheme(n)
+    const applyTheme = () => {
+      document.documentElement.setAttribute('data-theme', n)
+      try { localStorage.setItem('theme', n) } catch { /* sin almacenamiento */ }
+      setTheme(n)
+    }
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (document.startViewTransition && !reduceMotion) document.startViewTransition(applyTheme)
+    else applyTheme()
   }
   return [theme, toggle]
 }

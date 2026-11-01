@@ -714,3 +714,10 @@ th,td{border-color:var(--ln)}
 :root[data-theme="light"] .overdue-alert-action{background:#a73555;color:#fff}
 :root[data-theme="light"] .pill.pendiente{color:#a72b4d;border-color:#c8104f}
 
+::view-transition-old(root),::view-transition-new(root){animation-duration:220ms;animation-timing-function:ease-in-out}
+::view-transition-old(root){animation-name:theme-fade-out}
+::view-transition-new(root){animation-name:theme-fade-in}
+@keyframes theme-fade-out{to{opacity:0}}
+@keyframes theme-fade-in{from{opacity:0}}
+@media(prefers-reduced-motion:reduce){::view-transition-old(root),::view-transition-new(root){animation-duration:0s}}
+
