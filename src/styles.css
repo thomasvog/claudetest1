@@ -450,7 +450,7 @@ th,td{border-color:var(--ln)}
 .topbar-quick-add svg{width:25px;height:25px}
 .topbar-quick-add:hover{background:#ffaa22;box-shadow:0 5px 16px #ff990040}
 .topbar-quick-add:active{transform:scale(.97)}
-.topbar .mobile-menu{display:flex;align-items:center;justify-content:center;gap:9px;min-width:94px;height:54px;padding:0 15px;border:1px solid #94a3b838;border-radius:16px;background:#1d293d;color:#cbd5e1;cursor:pointer;font:inherit;font-size:15px;font-weight:600;transition:background .18s ease,transform .18s ease}
+.topbar .mobile-menu{display:flex;flex-direction:row;align-items:center;justify-content:center;gap:9px;min-width:94px;height:54px;padding:0 15px;border:1px solid #94a3b838;border-radius:16px;background:#1d293d;color:#cbd5e1;cursor:pointer;font:inherit;font-size:15px;font-weight:600;transition:background .18s ease,transform .18s ease}
 .topbar .mobile-menu:hover{background:#26354d}
 .topbar .mobile-menu:active{transform:scale(.98)}
 .topbar .mobile-menu svg{width:20px;height:20px}
