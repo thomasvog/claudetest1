@@ -96,9 +96,11 @@ class ReportEndpointTests(unittest.TestCase):
         if "GROUP BY l.name" in sql:
             return [{"area": "Extrusión", "count": 2}, {"area": "Servicios", "count": 1}]
         if "date_trunc('month'" in sql:
+            if "AS month_label" not in sql:
+                raise AssertionError("El período mensual debe usar un alias compatible con PostgreSQL")
             return [
-                {"month": date.today().strftime("%Y-%m"), "count": 2},
-                {"month": (date.today().replace(day=1) - timedelta(days=1)).strftime("%Y-%m"), "count": 1},
+                {"month_label": date.today().strftime("%Y-%m"), "count": 2},
+                {"month_label": (date.today().replace(day=1) - timedelta(days=1)).strftime("%Y-%m"), "count": 1},
             ]
         return []
 

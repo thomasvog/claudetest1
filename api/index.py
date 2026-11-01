@@ -1230,11 +1230,11 @@ def report_kpi_data():
                        "ORDER BY CASE criticality WHEN 'alta' THEN 0 WHEN 'media' THEN 1 WHEN 'baja' THEN 2 ELSE 3 END")
     areas = rows("SELECT COALESCE(l.name, 'No registrado') area, COUNT(*) count FROM findings f "
                  "LEFT JOIN locations l ON l.id=f.location_id GROUP BY l.name ORDER BY count DESC, area")
-    month_rows = rows("SELECT to_char(date_trunc('month', inspected_at), 'YYYY-MM') month, COUNT(*) count FROM findings "
+    month_rows = rows("SELECT to_char(date_trunc('month', inspected_at), 'YYYY-MM') AS month_label, COUNT(*) count FROM findings "
                       "WHERE inspected_at >= date_trunc('month', CURRENT_DATE) - INTERVAL '11 months' "
                       "GROUP BY 1 ORDER BY 1")
     counts = {str(item["criticality"] or "No registrado").lower(): int(item["count"]) for item in criticality}
-    monthly = {item["month"]: int(item["count"]) for item in month_rows}
+    monthly = {item["month_label"]: int(item["count"]) for item in month_rows}
     current = date.today().replace(day=1)
     labels = []
     for _ in range(12):
