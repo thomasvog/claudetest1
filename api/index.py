@@ -1096,9 +1096,9 @@ def finding_report_pdf(fid):
             image_data = bytes(photo["data"])
             with Image.open(io.BytesIO(image_data)) as image:
                 image.verify()
-            image = PDFImage(io.BytesIO(image_data), width=39 * mm, height=25 * mm, kind="proportional")
+            image = PDFImage(io.BytesIO(image_data), width=58 * mm, height=40 * mm, kind="proportional")
             thumbnails.append(Table([[Paragraph("Antes" if photo["kind"] == "antes" else "Después", styles["small"]), image]],
-                                    colWidths=[26 * mm, 43 * mm]))
+                                    colWidths=[18 * mm, 60 * mm]))
         except (OSError, ValueError, TypeError):
             thumbnails.append(pdf_paragraph("Evidencia no disponible.", styles["muted"]))
     if thumbnails:
@@ -1255,23 +1255,22 @@ def executive_report_content(data):
     if average is not None:
         average = float(average)
     kpis = [
-        ("Total de inspecciones realizadas", "No registrado", "El esquema no registra inspecciones independientes."),
-        ("Total de hallazgos", total, "COUNT(*) sobre findings."),
-        ("Hallazgos pendientes", pending, "COUNT(*) donde status = pendiente."),
-        ("Hallazgos solucionados", solved, "COUNT(*) donde status = solucionado."),
-        ("Porcentaje de resolución", "%.1f%%" % percentage if percentage is not None else "No registrado", "Solucionados / total de hallazgos x 100."),
-        ("Criticidad alta", critical_counts.get("alta", 0), "Hallazgos de criticidad alta, cualquiera sea su estado."),
-        ("Criticidad media", critical_counts.get("media", 0), "Hallazgos de criticidad media, cualquiera sea su estado."),
-        ("Criticidad baja", critical_counts.get("baja", 0), "Hallazgos de criticidad baja, cualquiera sea su estado."),
-        ("Pendientes con más de 30 días", int(summary["overdue"]), "Pendientes con CURRENT_DATE - inspected_at > 30."),
-        ("Pendientes de 15 a 30 días", int(summary["aged_15_30"]), "Pendientes con antigüedad entre 15 y 30 días, inclusive."),
-        ("Tiempo promedio de resolución", "%.1f días" % average if average is not None else "No registrado", "AVG(closed_at - inspected_at) para solucionados con ambas fechas."),
+        ("Total de inspecciones realizadas", "No registrado"),
+        ("Total de hallazgos", total),
+        ("Hallazgos pendientes", pending),
+        ("Hallazgos solucionados", solved),
+        ("Porcentaje de resolución", "%.1f%%" % percentage if percentage is not None else "No registrado"),
+        ("Criticidad alta", critical_counts.get("alta", 0)),
+        ("Criticidad media", critical_counts.get("media", 0)),
+        ("Criticidad baja", critical_counts.get("baja", 0)),
+        ("Pendientes con más de 30 días", int(summary["overdue"])),
+        ("Pendientes de 15 a 30 días", int(summary["aged_15_30"])),
+        ("Tiempo promedio de resolución", "%.1f días" % average if average is not None else "No registrado"),
     ]
-    table_data = [[pdf_paragraph("Indicador", styles["table_head"]), pdf_paragraph("Resultado", styles["table_head"]),
-                   pdf_paragraph("Fórmula / alcance", styles["table_head"])]]
-    for label, value, formula in kpis:
-        table_data.append([pdf_paragraph(label, styles["table"]), pdf_paragraph(value, styles["table"]), pdf_paragraph(formula, styles["table"])])
-    kpi_table = LongTable(table_data, colWidths=[53 * mm, 32 * mm, 93 * mm], repeatRows=1)
+    table_data = [[pdf_paragraph("Indicador", styles["table_head"]), pdf_paragraph("Resultado", styles["table_head"])]]
+    for label, value in kpis:
+        table_data.append([pdf_paragraph(label, styles["table"]), pdf_paragraph(value, styles["table"])])
+    kpi_table = LongTable(table_data, colWidths=[112 * mm, 66 * mm], repeatRows=1)
     kpi_table.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), PDF_NAVY), ("GRID", (0, 0), (-1, -1), 0.35, PDF_LINE),
         ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F4F6F9")]),
