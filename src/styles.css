@@ -543,7 +543,8 @@ th,td{border-color:var(--ln)}
 	.topbar-brand img{width:clamp(128px,46vw,175px);height:auto;max-height:60px}
 	.topbar-actions{gap:8px}
 	.topbar-quick-add{width:52px;height:52px;border-radius:15px}
-	.topbar .mobile-menu{min-width:82px;height:52px;padding:0 12px;border-radius:15px;font-size:14px}
+	.topbar .mobile-menu{width:52px;min-width:52px;height:52px;gap:0;padding:0;border-radius:15px}
+	.topbar .mobile-menu span{display:none}
 	.page-content:has(.dashboard-page){padding:20px}
 	.dashboard-page{gap:24px}
 	.institution-card{padding:28px;border-radius:22px}
@@ -586,7 +587,7 @@ th,td{border-color:var(--ln)}
 	.topbar{padding-inline:14px}
 	.topbar-brand img{width:clamp(112px,40vw,155px)}
 	.topbar-quick-add{width:46px;height:46px}
-	.topbar .mobile-menu{min-width:72px;height:46px;padding:0 9px;font-size:12px}
+	.topbar .mobile-menu{width:46px;min-width:46px;height:46px;padding:0}
 	.topbar .mobile-menu svg{width:18px;height:18px}
 	.page-content:has(.dashboard-page){padding-inline:16px}
 	.institution-card{padding:22px}
@@ -702,11 +703,14 @@ th,td{border-color:var(--ln)}
 :root[data-theme="light"] .auth-mark span{border-color:var(--ln);color:#b85b00}
 :root[data-theme="light"] .auth-form .card{box-shadow:0 8px 24px #24364d12}
 :root[data-theme="light"] .theme-button{background:#fff;border-color:var(--ln);color:var(--tx)}
-:root[data-theme="light"] .btn{color:#fff}
+:root[data-theme="light"] .btn{color:#1b1500}
+:root[data-theme="light"] .btn.g{color:#fff}
 :root[data-theme="light"] .btn.l{color:var(--tx)}
 :root[data-theme="light"] .pw .btn.l{background:#f7f9fb;border-color:var(--ln);color:#151c2f}
 :root[data-theme="light"] .btn.y,:root[data-theme="light"] .institution-action-primary{color:#231503}
 :root[data-theme="light"] form.card .btn.l{color:var(--tx)}
 :root[data-theme="light"] form.card .btn.y{color:#231503}
+:root[data-theme="light"] .thm button{background:#f3f6f9;color:#34445b;border:1px solid var(--ln)}
+:root[data-theme="light"] .overdue-alert-action{background:#a73555;color:#fff}
 :root[data-theme="light"] .pill.pendiente{color:#a72b4d;border-color:#c8104f}
 
