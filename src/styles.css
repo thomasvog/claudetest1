@@ -703,6 +703,10 @@ th,td{border-color:var(--ln)}
 :root[data-theme="light"] .auth-form .card{box-shadow:0 8px 24px #24364d12}
 :root[data-theme="light"] .theme-button{background:#fff;border-color:var(--ln);color:var(--tx)}
 :root[data-theme="light"] .btn{color:#fff}
+:root[data-theme="light"] .btn.l{color:var(--tx)}
+:root[data-theme="light"] .pw .btn.l{background:#f7f9fb;border-color:var(--ln);color:#151c2f}
 :root[data-theme="light"] .btn.y,:root[data-theme="light"] .institution-action-primary{color:#231503}
+:root[data-theme="light"] form.card .btn.l{color:var(--tx)}
+:root[data-theme="light"] form.card .btn.y{color:#231503}
 :root[data-theme="light"] .pill.pendiente{color:#a72b4d;border-color:#c8104f}
 
