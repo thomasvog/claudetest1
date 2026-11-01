@@ -49,7 +49,7 @@ export default function Dashboard() {
           <div className="institution-scope"><span>SUPERVISIÓN DE</span><b>INTEGRIDAD EN PLANTA</b></div>
         </div>
         <h1 id="institution-title">Monitoreo de Integridad Eléctrica en Áreas Clasificadas</h1>
-        <p className="institution-description">Control de hallazgos en atmósferas explosivas (gases y polvos combustibles), verificación de sellos Ex d, cajas Ex e, desclasificaciones e instrumentación intrínseca.</p>
+        <p className="institution-description">Control de hallazgos eléctricos en atmósferas explosivas (gases y polvos combustibles) y desclasificaciones.</p>
         <div className="institution-actions">
           {canReports && <Link className="institution-action" to="/informes"><Icon name="pdf" />Informes PDF</Link>}
           <a className="institution-action" href="/api/findings/export.xlsx"><Icon name="excel" />Exportar Excel</a>
