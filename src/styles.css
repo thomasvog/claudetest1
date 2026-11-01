@@ -263,7 +263,7 @@ dt{font-weight:600}
 .loader{width:16px;height:16px;border:2px solid var(--ln);border-top-color:var(--ok);border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .side-icon svg{width:18px;height:18px}
-.brand img,.topbar-brand img{border-radius:8px;object-fit:contain}
+.brand img,.topbar-brand img{padding:3px;border-radius:8px;background:#fff;object-fit:contain}
 .reports-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 .report-option{position:relative;display:grid;grid-template-columns:42px minmax(0,1fr);gap:10px 14px;align-items:start;min-width:0;padding:20px;margin:0;border-color:var(--ln)}
 .report-option-mark{width:42px;height:42px;display:grid;place-items:center;border:1px solid var(--ln);border-radius:9px;color:var(--ye);background:#ff990012}
