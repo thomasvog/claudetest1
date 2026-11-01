@@ -73,7 +73,7 @@ dl{display:grid;grid-template-columns:max-content 1fr;gap:.35rem 1.1rem;margin:0
 @media(max-width:600px){main{padding:.7rem}.big{font-size:2.2rem}.logo img{height:28px}.logo{padding:.2rem .45rem}.top{padding:.5rem .7rem;gap:.4rem}}
 
 /* Sistema visual de la aplicación */
-body{min-width:320px;background-color:var(--bg);background-image:linear-gradient(90deg, color-mix(in srgb,var(--ln) 20%,transparent) 1px, transparent 1px),linear-gradient(color-mix(in srgb,var(--ln) 20%,transparent) 1px, transparent 1px);background-size:32px 32px;font-family:"Manrope","Avenir Next",sans-serif;line-height:1.55}
+body{min-width:320px;background-color:var(--bg);font-family:"Manrope","Avenir Next",sans-serif;line-height:1.55}
 button,input,select,textarea{font:inherit}
 a{color:var(--lk)}
 :focus-visible{outline:3px solid #9dbd57;outline-offset:3px}
@@ -170,7 +170,7 @@ dt{font-weight:600}
 .ck{font-size:12px;padding:10px 12px}
 .center{max-width:480px}
 .center.mu{margin-top:25vh;text-align:center}
-.auth-page{min-height:100vh;display:flex;flex-direction:column;background-color:var(--bg);background-image:linear-gradient(90deg,color-mix(in srgb,var(--ln) 20%,transparent) 1px,transparent 1px),linear-gradient(color-mix(in srgb,var(--ln) 20%,transparent) 1px,transparent 1px);background-size:32px 32px}
+.auth-page{min-height:100vh;display:flex;flex-direction:column;background-color:var(--bg)}
 .auth-top{height:74px;display:flex;align-items:center;justify-content:space-between;padding:0 clamp(20px,5vw,72px);border-bottom:1px solid var(--ln);background:var(--pa)}
 .auth-brand{padding:0;color:var(--tx)}
 .theme-button{width:38px;height:38px;display:grid;place-items:center;border:1px solid var(--ln);border-radius:5px;background:var(--pa);color:var(--tx);cursor:pointer}
@@ -282,7 +282,6 @@ dt{font-weight:600}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important}}
 
 /* PETROCUYO HAZLOC dark interface */
-body{background-image:linear-gradient(90deg,#26334b38 1px,transparent 1px),linear-gradient(#26334b38 1px,transparent 1px)}
 :focus-visible{outline-color:var(--ye)}
 .sidebar{background:#080d20;border-right:1px solid var(--ln);color:var(--tx)}
 .brand img{border-radius:8px}
@@ -333,7 +332,6 @@ th,td{border-color:var(--ln)}
 .photos img,.thm img{border-color:var(--ln)}
 .box{background:var(--in);border-color:var(--ln)}
 .ck{border-color:var(--ln)}
-.auth-page{background-image:linear-gradient(90deg,#26334b38 1px,transparent 1px),linear-gradient(#26334b38 1px,transparent 1px)}
 .auth-top{background:var(--pa);border-color:var(--ln)}
 .auth-brand{color:var(--tx)}
 .theme-button{background:var(--pa);border-color:var(--ln);color:var(--tx)}
@@ -652,16 +650,20 @@ th,td{border-color:var(--ln)}
 :root[data-theme="light"] .overdue-alert-copy .section-kicker{color:#a73555}
 :root[data-theme="light"] .overdue-alert-copy>b{color:#6e243a}
 :root[data-theme="light"] .overdue-alert-copy p{color:#775b64}
-:root[data-theme="light"] .overdue-clear{border-color:#a9dfca;background:#f1fbf6;color:#286b52}
+:root[data-theme="light"] .overdue-clear{border-color:#76b99a;background:#eff8f2;color:#286b52}
 :root[data-theme="light"] .overdue-clear-icon{background:#e0f5eb;color:#168d65}
 :root[data-theme="light"] .stat-card{background:#fff;color:var(--tx)}
 :root[data-theme="light"] .stat-card:hover{border-color:#becbd9;box-shadow:0 7px 18px #24364d18}
 :root[data-theme="light"] .stat-icon{border-color:var(--ln);background:#f5f7fa}
 :root[data-theme="light"] .stat-value{color:var(--tx)}
 :root[data-theme="light"] .stat-card.orange .stat-icon,:root[data-theme="light"] .stat-card.orange .stat-value,:root[data-theme="light"] .stat-card.orange .stat-percentage{color:#d77500}
+:root[data-theme="light"] .stat-card.orange{border-color:#f1d8ae;background:#fff7eb}
 :root[data-theme="light"] .stat-card.green .stat-icon,:root[data-theme="light"] .stat-card.green .stat-value{color:#168d65}
+:root[data-theme="light"] .stat-card.green{border-color:#b8d5c1;background:#eff8f2}
 :root[data-theme="light"] .stat-card.red .stat-icon,:root[data-theme="light"] .stat-card.red .stat-value{color:#c8104f}
+:root[data-theme="light"] .stat-card.red{border-color:#edc2cd;background:#fff3f6}
 :root[data-theme="light"] .stat-card.blue .stat-icon,:root[data-theme="light"] .stat-card.blue .stat-value{color:#52647c}
+:root[data-theme="light"] .stat-card.blue{border-color:#c9d4e0;background:#f1f5f9}
 :root[data-theme="light"] .stat-card.red{border-color:#efb6c8}
 :root[data-theme="light"] .stat-card.red .stat-icon{border-color:#f1c5d2;background:#fff3f6}
 :root[data-theme="light"] .stat-progress{background:#edf1f6}
@@ -669,7 +671,7 @@ th,td{border-color:var(--ln)}
 :root[data-theme="light"] .criticality-card{border-width:2px}
 :root[data-theme="light"] .criticality-card.alta{border-color:#f4bfce;background:#fff6f8}
 :root[data-theme="light"] .criticality-card.media{border-color:#f4df80;background:#fffdf3}
-:root[data-theme="light"] .criticality-card.baja{border-color:#a5e5c9;background:#f3fbf7}
+:root[data-theme="light"] .criticality-card.baja{border-color:#82c3a2;background:#eff8f2}
 :root[data-theme="light"] .criticality-card.alta>span,:root[data-theme="light"] .criticality-card.alta b{color:#aa1245}
 :root[data-theme="light"] .criticality-card.media>span,:root[data-theme="light"] .criticality-card.media b{color:#a94800}
 :root[data-theme="light"] .criticality-card.baja>span,:root[data-theme="light"] .criticality-card.baja b{color:#126b4f}
@@ -679,7 +681,7 @@ th,td{border-color:var(--ln)}
 :root[data-theme="light"] .dashboard-directory-link a{color:#42536b}
 :root[data-theme="light"] .dashboard-directory-link a:hover{color:#b85b00}
 :root[data-theme="light"] .attention-card.has-overdue{border-color:#f1c2d0;background:#fff5f7}
-:root[data-theme="light"] .attention-card.clear{border-color:#a9dfca;background:#f1fbf6}
+:root[data-theme="light"] .attention-card.clear{border-color:#76b99a;background:#eff8f2}
 :root[data-theme="light"] .attention-count{color:#c8104f}
 :root[data-theme="light"] .attention-card.clear .attention-count{color:#168d65}
 :root[data-theme="light"] .empty-state{border-color:var(--ln);background:#fff;color:var(--mu)}
