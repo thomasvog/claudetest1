@@ -435,7 +435,9 @@ def bad_method(_):
 
 @app.errorhandler(psycopg.Error)
 def database_error(e):
-    app.logger.error("Falló una operación de base de datos (%s)", type(e).__name__)
+    message = getattr(getattr(e, "diag", None), "message_primary", None) or "sin detalle"
+    app.logger.error("Falló una operación de base de datos (tipo=%s, SQLSTATE=%s, ruta=%s): %s",
+                     type(e).__name__, e.sqlstate or "desconocido", request.path, message)
     return err("No se pudo completar la operación en la base de datos. Probá de nuevo.", 503)
 
 

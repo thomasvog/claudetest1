@@ -81,7 +81,7 @@ function TopBar({ user, onLogout }) {
     <div className={`app-shell${open ? ' menu-open' : ''}`}>
       {open && <button className="nav-backdrop" aria-label="Cerrar menú" onClick={() => setOpen(false)} />}
       <aside className="sidebar" aria-label="Navegación principal">
-        <Link to="/" className="brand"><img src="/logo.png" alt="Petrocuyo HAZLOC" /><span><b>Inspecciones</b><small>SEGURIDAD OPERACIONAL</small></span></Link>
+        <Link to="/" className="brand"><img src="/logo.png" alt="Petrocuyo HAZLOC" /><span><b>Inspecciones</b><small>Mantenimiento Mendoza</small></span></Link>
         <div className="side-nav">
           <p className="nav-label">Espacio de trabajo</p>
           {primary.map(link)}
@@ -143,9 +143,9 @@ function AuthLayout({ children }) {
   const [theme, toggle] = useTheme()
   return (
     <div className="auth-page">
-      <header className="auth-top"><Link to="/" className="brand auth-brand"><img src="/logo.png" alt="Petrocuyo HAZLOC" /><span><b>Inspecciones</b><small>SEGURIDAD OPERACIONAL</small></span></Link><button type="button" className="theme-button" onClick={toggle} aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}>{theme === 'dark' ? SUN : MOON}</button></header>
+      <header className="auth-top"><Link to="/" className="brand auth-brand"><img src="/logo.png" alt="Petrocuyo HAZLOC" /><span><b>Inspecciones</b><small>Mantenimiento Mendoza</small></span></Link><button type="button" className="theme-button" onClick={toggle} aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}>{theme === 'dark' ? SUN : MOON}</button></header>
       <main className="auth-layout"><section className="auth-intro"><span className="eyebrow">PETROCUYO · HAZLOC</span><h1>Seguridad que se ve en campo.</h1><p>Un espacio de trabajo para registrar, priorizar y resolver hallazgos de inspección.</p><div className="auth-mark"><span>H</span><i>Hazardous locations</i></div></section><div className="auth-form">{children}</div></main>
-      <footer className="auth-footer">Inspecciones · Seguridad operacional</footer>
+      <footer className="auth-footer">Inspecciones · Mantenimiento Mendoza</footer>
     </div>
   )
 }

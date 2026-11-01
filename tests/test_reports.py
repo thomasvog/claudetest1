@@ -180,6 +180,18 @@ class ReportEndpointTests(unittest.TestCase):
                         self.assert_pdf_response(response)
                         self.assertGreater(len(response.data), 2500)
 
+    def test_database_errors_log_diagnostics_without_exposing_them_to_clients(self):
+        failure = backend.psycopg.errors.UndefinedColumn("missing report column")
+        with patch.object(backend, "db", return_value=ReadOnlyDatabase()), \
+             patch.object(backend, "one", side_effect=failure), \
+             self.assertLogs(backend.app.logger.name, level="ERROR") as captured:
+            response = self.client_for("supervisor").get("/api/reports/executive.pdf")
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.get_json()["error"], "No se pudo completar la operación en la base de datos. Probá de nuevo.")
+        self.assertIn("SQLSTATE=42703", captured.output[0])
+        self.assertIn("ruta=/api/reports/executive.pdf", captured.output[0])
+
     def test_security_assessment_uses_explicit_data_and_history(self):
         critical = backend.security_assessment(
             2, {"alta": 1, "media": 1, "baja": 0}, 0, 1, 4, True, "improving", -2,
