@@ -942,6 +942,53 @@ def make_report_pdf(title, content, wide=False, generated=None, single_page=Fals
     return buf
 
 
+def make_finding_report_pdf(title, subtitle, content, generated):
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=16 * mm, rightMargin=16 * mm,
+                            topMargin=10 * mm, bottomMargin=16 * mm, title=title, author="PETROCUYO HAZLOC")
+    styles = pdf_styles()
+    logo_path = Path(__file__).resolve().parent.parent / "public" / "logo.png"
+    logo = PDFImage(pdf_logo_data(logo_path), width=48 * mm, height=16 * mm, kind="proportional") if logo_path.is_file() else pdf_paragraph("PETROCUYO HAZLOC", styles["brand"])
+    available = A4[0] - doc.leftMargin - doc.rightMargin
+    brand = Table([[
+        logo,
+        Paragraph("<b>PETROCUYO S.A. · MANTENIMIENTO MENDOZA</b><br/>"
+                  "Sistema de Integridad Eléctrica HAZLOC (IEC 60079)<br/>"
+                  "Fecha de emisión: " + escape(generated), styles["brand"]),
+    ]], colWidths=[52 * mm, available - 52 * mm])
+    brand.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("ALIGN", (1, 0), (1, 0), "RIGHT"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+        ("TOPPADDING", (0, 0), (-1, -1), 0), ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+    ]))
+    title_style = ParagraphStyle("FindingReportTitle", fontName="Helvetica-Bold", fontSize=14, leading=17, textColor=PDF_NAVY)
+    subtitle_style = ParagraphStyle("FindingReportSubtitle", fontName="Helvetica", fontSize=8, leading=10, textColor=PDF_MUTED)
+    story = [brand, Spacer(1, 3 * mm), Paragraph(escape(title), title_style),
+             Paragraph(escape(subtitle), subtitle_style),
+             HRFlowable(width="100%", thickness=0.8, color=PDF_LINE, spaceBefore=2 * mm, spaceAfter=2 * mm)] + content
+
+    def draw_page(canvas, page):
+        width, height = page.pagesize
+        canvas.saveState()
+        canvas.setFillColor(PDF_NAVY)
+        canvas.rect(0, height - 4 * mm, width * .72, 4 * mm, fill=1, stroke=0)
+        canvas.setFillColor(PDF_ORANGE)
+        canvas.rect(width * .72, height - 4 * mm, width * .28, 4 * mm, fill=1, stroke=0)
+        canvas.setStrokeColor(PDF_LINE)
+        canvas.setLineWidth(0.5)
+        canvas.line(16 * mm, 12 * mm, width - 16 * mm, 12 * mm)
+        canvas.setFillColor(PDF_MUTED)
+        canvas.setFont("Helvetica", 6.5)
+        canvas.drawString(16 * mm, 7 * mm, "Petrocuyo S.A. · Documento de seguridad industrial y mantenimiento eléctrico")
+        canvas.drawRightString(width - 16 * mm, 7 * mm, "Página %s" % page.page)
+        canvas.restoreState()
+
+    doc.build([KeepInFrame(available, doc.height, story, mode="shrink")], onFirstPage=draw_page)
+    buf.seek(0)
+    return buf
+
+
 def pdf_download(buf, filename):
     response = send_file(buf, mimetype="application/pdf", as_attachment=True, download_name=filename)
     response.headers["Cache-Control"] = "private, no-store"
@@ -1050,8 +1097,10 @@ def report_list_pdf(status, title, filename):
     return pdf_download(make_report_pdf(title, content, wide=True, generated=generated), filename)
 
 
-def report_photo_max_size(width, height):
-    return (84 * mm, 100 * mm) if height > width else (84 * mm, 63 * mm)
+def report_photo_max_size(width, height, single_photo=False):
+    if single_photo:
+        return (72 * mm, 96 * mm) if height > width else (150 * mm, 90 * mm)
+    return (78 * mm, 82 * mm) if height > width else (78 * mm, 55 * mm)
 
 
 @app.get("/api/reports/findings/<int:fid>.pdf")
@@ -1067,72 +1116,134 @@ def finding_report_pdf(fid):
         return err("Solo se pueden generar informes de hallazgos solucionados.", 409)
     generated = pdf_generated_at()
     styles = pdf_styles()
+    available = A4[0] - 32 * mm
+    half_width = available / 2
+    section_style = ParagraphStyle("FindingReportSection", fontName="Helvetica-Bold", fontSize=9, leading=11, textColor=PDF_NAVY, spaceBefore=1.2 * mm, spaceAfter=0.8 * mm)
+    box_body_style = ParagraphStyle("FindingReportBoxBody", fontName="Helvetica", fontSize=8, leading=10, textColor=colors.HexColor("#202A3A"))
+    evidence_style = ParagraphStyle("FindingReportEvidence", fontName="Helvetica-Bold", fontSize=6.5, leading=8, textColor=PDF_MUTED)
+    body = [Paragraph("1. IDENTIFICACIÓN Y CONDICIONES DE INSTALACIÓN", section_style)]
     data_rows = [
-        [pdf_labeled("Código identificador", report_code(finding), styles["small"]),
-         pdf_labeled("Criticidad", str(finding.get("criticality") or "").capitalize(), styles["small"])],
-        [pdf_labeled("Fecha de detección", finding.get("inspected_at"), styles["small"]),
-         pdf_labeled("Fecha de solución", finding.get("closed_at"), styles["small"])],
-        [pdf_labeled("Área o sector", finding.get("area"), styles["small"]),
-         pdf_labeled("Responsable de la solución", finding.get("closer"), styles["small"])],
-        [pdf_labeled("Riesgo identificado", None, styles["small"]),
-         pdf_labeled("Estado final", "SOLUCIONADO", styles["small"])],
+        [pdf_labeled("TAG / Identificación", finding.get("tag") or report_code(finding), styles["small"]),
+         pdf_labeled("N° Orden de Trabajo (OT)", finding.get("ot") or "Sin OT asignada", styles["small"])],
+        [pdf_labeled("Área de Planta", finding.get("area"), styles["small"]),
+         pdf_labeled("Zona Clasificada IEC", finding.get("zone"), styles["small"])],
+        [pdf_labeled("Protección Ex", finding.get("protection"), styles["small"]),
+         pdf_labeled("Criticidad Inicial", str(finding.get("criticality") or "").capitalize(), styles["small"])],
+        [pdf_labeled("Fecha de Inspección", finding.get("inspected_at"), styles["small"]),
+         pdf_labeled("Inspector Actuante", finding.get("inspector"), styles["small"])],
     ]
-    metadata = Table(data_rows, colWidths=[(A4[0] - 32 * mm) / 2] * 2)
+    metadata = Table(data_rows, colWidths=[half_width] * 2)
     metadata.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F3F5F8")),
-        ("BOX", (0, 0), (-1, -1), 0.4, PDF_LINE),
-        ("INNERGRID", (0, 0), (-1, -1), 0.3, PDF_LINE),
+        ("ROWBACKGROUNDS", (0, 0), (-1, -1), [colors.white, colors.HexColor("#F7F9FB")]),
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("LEFTPADDING", (0, 0), (-1, -1), 6), ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-        ("TOPPADDING", (0, 0), (-1, -1), 4), ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ("LEFTPADDING", (0, 0), (-1, -1), 5), ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+        ("TOPPADDING", (0, 0), (-1, -1), 3), ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
     ]))
-    story = [
-        metadata, Spacer(1, 2 * mm),
-        pdf_labeled("Descripción del hallazgo", finding.get("description"), styles["body"]),
-        pdf_labeled("Acción correctiva implementada", finding.get("resolution"), styles["body"]),
-        pdf_labeled("Observaciones", None, styles["body"]),
-        pdf_labeled("Usuario que registró el hallazgo", finding.get("inspector"), styles["small"]),
-        Paragraph("Evidencias fotográficas", styles["section"]),
-    ]
+    body.extend([metadata, Paragraph("2. NO CONFORMIDAD DETECTADA (ESTADO ENCONTRADO)", section_style)])
+    finding_box = Table([
+        [pdf_labeled("Tipo", finding.get("finding_type") or "No registrado", styles["body"])],
+        [pdf_paragraph(finding.get("description"), box_body_style)],
+    ], colWidths=[available])
+    finding_box.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#FFF3F6")),
+        ("BOX", (0, 0), (-1, -1), 0.8, PDF_RED),
+        ("LEFTPADDING", (0, 0), (-1, -1), 4 * mm), ("RIGHTPADDING", (0, 0), (-1, -1), 4 * mm),
+        ("TOPPADDING", (0, 0), (-1, -1), 2 * mm), ("BOTTOMPADDING", (0, 0), (-1, -1), 2 * mm),
+    ]))
+    body.extend([finding_box, Paragraph("3. INTERVENCIÓN CORRECTIVA EFECTUADA (RESOLUCIÓN TÉCNICA)", section_style)])
+    intervention_meta = Table([[
+        pdf_labeled("Fecha de Cierre", finding.get("closed_at"), styles["small"]),
+        pdf_labeled("Responsable", finding.get("closer"), styles["small"]),
+        pdf_labeled("OT", finding.get("ot") or "Sin OT asignada", styles["small"]),
+    ]], colWidths=[available / 3] * 3)
+    intervention_meta.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 2 * mm),
+    ]))
+    intervention = Table([
+        [intervention_meta],
+        [pdf_paragraph(finding.get("resolution"), box_body_style)],
+    ], colWidths=[available])
+    intervention.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F0FBF4")),
+        ("BOX", (0, 0), (-1, -1), 0.8, PDF_GREEN),
+        ("LEFTPADDING", (0, 0), (-1, -1), 4 * mm), ("RIGHTPADDING", (0, 0), (-1, -1), 4 * mm),
+        ("TOPPADDING", (0, 0), (-1, -1), 2 * mm), ("BOTTOMPADDING", (0, 0), (-1, -1), 2 * mm),
+    ]))
+    body.extend([intervention, Paragraph("4. REGISTRO FOTOGRÁFICO DE LA INTERVENCIÓN", section_style)])
     thumbnails = []
-    photo_label_style = ParagraphStyle("ReportPhotoLabel", parent=styles["small"], alignment=TA_CENTER)
+    photos_by_kind = {"antes": [], "despues": []}
     for photo in photos[:4]:
+        photos_by_kind["antes" if photo["kind"] == "antes" else "despues"].append(photo)
+    ordered_photos = []
+    for index in range(max((len(items) for items in photos_by_kind.values()), default=0)):
+        for kind in ("antes", "despues"):
+            if index < len(photos_by_kind[kind]):
+                ordered_photos.append((kind, photos_by_kind[kind][index], index))
+    for kind, photo, index in ordered_photos:
         try:
             image_data = bytes(photo["data"])
             with Image.open(io.BytesIO(image_data)) as image:
                 photo_width, photo_height = image.size
                 image.verify()
-            frame_width, frame_height = report_photo_max_size(photo_width, photo_height)
+            frame_width, frame_height = report_photo_max_size(photo_width, photo_height, len(ordered_photos) == 1)
             image = PDFImage(io.BytesIO(image_data), width=frame_width, height=frame_height, kind="proportional")
-            thumbnail = Table([[image], [Paragraph("Antes" if photo["kind"] == "antes" else "Después", photo_label_style)]],
-                              colWidths=[85 * mm])
+            evidence_label = "ESTADO ENCONTRADO" if kind == "antes" else "ESTADO REPARADO / CERRADO"
+            if index:
+                evidence_label = "EVIDENCIA ADICIONAL · " + evidence_label
+            label = Paragraph("EVIDENCIA: " + evidence_label, evidence_style)
+            thumbnail = Table([[label], [image]], colWidths=[80 * mm])
             thumbnail.setStyle(TableStyle([
-                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F8F9FB")),
+                ("BOX", (0, 0), (-1, -1), 0.6, PDF_LINE),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"), ("ALIGN", (0, 1), (-1, 1), "CENTER"),
                 ("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-                ("TOPPADDING", (0, 0), (-1, -1), 0), ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+                ("TOPPADDING", (0, 0), (-1, -1), 1 * mm), ("BOTTOMPADDING", (0, 0), (-1, -1), 1 * mm),
             ]))
             thumbnails.append(thumbnail)
         except (OSError, ValueError, TypeError):
-            thumbnails.append(pdf_paragraph("Evidencia no disponible.", styles["muted"]))
+            thumbnails.append(Table([[pdf_paragraph("Evidencia no disponible.", styles["muted"])]], colWidths=[80 * mm]))
     if thumbnails:
-        if len(thumbnails) % 2:
-            thumbnails.append(Paragraph("", styles["small"]))
-        photo_rows = [[thumbnails[i], thumbnails[i + 1]] for i in range(0, len(thumbnails), 2)]
-        photo_table = Table(photo_rows, colWidths=[(A4[0] - 32 * mm) / 2] * 2)
-        photo_table.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F8F9FB")),
-            ("BOX", (0, 0), (-1, -1), 0.4, PDF_LINE), ("INNERGRID", (0, 0), (-1, -1), 0.3, PDF_LINE),
-            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-            ("LEFTPADDING", (0, 0), (-1, -1), 5), ("RIGHTPADDING", (0, 0), (-1, -1), 5),
-            ("TOPPADDING", (0, 0), (-1, -1), 3), ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-        ]))
-        story.append(photo_table)
+        if len(thumbnails) == 1:
+            photo_table = Table([[thumbnails[0]]], colWidths=[available])
+            photo_table.setStyle(TableStyle([("ALIGN", (0, 0), (-1, -1), "CENTER")]))
+        else:
+            if len(thumbnails) % 2:
+                thumbnails.append(Spacer(1, 1))
+            photo_rows = [[thumbnails[i], thumbnails[i + 1]] for i in range(0, len(thumbnails), 2)]
+            photo_table = Table(photo_rows, colWidths=[half_width] * 2)
+            photo_table.setStyle(TableStyle([
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 2 * mm), ("RIGHTPADDING", (0, 0), (-1, -1), 2 * mm),
+                ("TOPPADDING", (0, 0), (-1, -1), 1 * mm), ("BOTTOMPADDING", (0, 0), (-1, -1), 1 * mm),
+            ]))
+        body.append(photo_table)
         if len(photos) > 4:
-            story.append(pdf_paragraph("Se muestran 4 de %s fotografías adjuntas." % len(photos), styles["muted"]))
+            body.append(pdf_paragraph("Se muestran 4 de %s fotografías adjuntas." % len(photos), styles["muted"]))
     else:
-        story.append(pdf_paragraph("No hay fotografías adjuntas." if not photos else "No se pudieron leer las fotografías adjuntas.", styles["muted"]))
+        body.append(pdf_paragraph("No hay fotografías adjuntas." if not photos else "No se pudieron leer las fotografías adjuntas.", styles["muted"]))
+    body.extend([
+        Spacer(1, 2 * mm),
+        pdf_paragraph("Este documento resume los datos registrados al cierre del hallazgo. Las verificaciones y aprobaciones aplicables deben constar en sus registros correspondientes.", styles["muted"]),
+    ])
+    signature_style = ParagraphStyle("FindingReportSignature", fontName="Helvetica", fontSize=7, leading=9, textColor=PDF_NAVY, alignment=TA_CENTER)
+    signatures = Table([
+        [Spacer(1, 7 * mm), Spacer(1, 7 * mm)],
+        [Paragraph("<b>%s</b><br/>Responsable de la solución" % escape(pdf_value(finding.get("closer"))), signature_style),
+         Paragraph("Supervisión / Aprobación HAZLOC", signature_style)],
+    ], colWidths=[half_width] * 2)
+    signatures.setStyle(TableStyle([
+        ("LINEABOVE", (0, 1), (-1, 1), 0.6, PDF_MUTED),
+        ("LEFTPADDING", (0, 0), (-1, -1), 8), ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+        ("TOPPADDING", (0, 1), (-1, 1), 2 * mm),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+    ]))
+    body.append(signatures)
     filename = "hallazgo-%s-solucionado.pdf" % fid
-    return pdf_download(make_report_pdf("INFORME DE HALLAZGO SOLUCIONADO", story, generated=generated, single_page=True), filename)
+    title = "ACTA DE INTERVENCIÓN Y CIERRE TÉCNICO HAZLOC"
+    subtitle = "Registro de reparación y restitución de integridad eléctrica · Registro #%s" % report_code(finding)
+    report = make_finding_report_pdf(title, subtitle, body, generated)
+    return pdf_download(report, filename)
 
 
 @app.get("/api/reports/pending.pdf")

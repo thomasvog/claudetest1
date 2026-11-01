@@ -39,6 +39,9 @@ def finding(status="solucionado", finding_id=41):
         "tag": "HAZ-041",
         "status": status,
         "criticality": "alta",
+        "finding_type": "Deterioro",
+        "zone": "21",
+        "protection": "Ex d",
         "inspected_at": today - timedelta(days=8),
         "closed_at": today - timedelta(days=3) if status == "solucionado" else None,
         "area": "Extrusión",
@@ -165,6 +168,8 @@ class ReportEndpointTests(unittest.TestCase):
         portrait_frame = backend.report_photo_max_size(30, 40)
         self.assertEqual(portrait_frame[0], landscape_frame[0])
         self.assertGreater(portrait_frame[1], landscape_frame[1])
+        single_photo_frame = backend.report_photo_max_size(40, 30, single_photo=True)
+        self.assertGreater(single_photo_frame[0], landscape_frame[0])
 
     def test_individual_pdf_rejects_pending_finding(self):
         with patch.object(backend, "db", return_value=ReadOnlyDatabase()), \
