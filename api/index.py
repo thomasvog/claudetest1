@@ -1096,9 +1096,15 @@ def finding_report_pdf(fid):
             image_data = bytes(photo["data"])
             with Image.open(io.BytesIO(image_data)) as image:
                 image.verify()
-            image = PDFImage(io.BytesIO(image_data), width=58 * mm, height=40 * mm, kind="proportional")
-            thumbnails.append(Table([[Paragraph("Antes" if photo["kind"] == "antes" else "Después", styles["small"]), image]],
-                                    colWidths=[18 * mm, 60 * mm]))
+            image = PDFImage(io.BytesIO(image_data), width=84 * mm, height=63 * mm, kind="proportional")
+            thumbnail = Table([[image], [Paragraph("Antes" if photo["kind"] == "antes" else "Después", styles["small"])]],
+                              colWidths=[85 * mm])
+            thumbnail.setStyle(TableStyle([
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                ("TOPPADDING", (0, 0), (-1, -1), 0), ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+            ]))
+            thumbnails.append(thumbnail)
         except (OSError, ValueError, TypeError):
             thumbnails.append(pdf_paragraph("Evidencia no disponible.", styles["muted"]))
     if thumbnails:
@@ -1255,7 +1261,6 @@ def executive_report_content(data):
     if average is not None:
         average = float(average)
     kpis = [
-        ("Total de inspecciones realizadas", "No registrado"),
         ("Total de hallazgos", total),
         ("Hallazgos pendientes", pending),
         ("Hallazgos solucionados", solved),
