@@ -480,6 +480,13 @@ th,td{border-color:var(--ln)}
 .institution-action-primary:hover{background:#ffaa22}
 .institution-action-primary svg{color:#101827}
 @media(min-width:901px){
+	.topbar{height:70px;gap:12px;padding-inline:clamp(16px,3vw,36px)}
+	.topbar-brand img{width:150px;height:49px;max-height:50px}
+	.topbar-actions{gap:8px}
+	.topbar-quick-add{width:44px;height:44px;border-radius:12px}
+	.topbar-quick-add svg{width:21px;height:21px}
+	.topbar .mobile-menu{min-width:80px;height:44px;gap:7px;padding-inline:12px;border-radius:12px;font-size:13px}
+	.topbar .mobile-menu svg{width:18px;height:18px}
 	.institution-card{padding:24px}
 	.institution-meta{min-height:40px}
 	.institution-divider{height:40px}
