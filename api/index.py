@@ -395,17 +395,25 @@ def gate():
     if not URL:
         return err("Falta conectar la base de datos (variable DATABASE_URL). Ver el README.", 503)
     if not _ready:
+        step = "conexión"
+        statement = None
         try:
-            for s in SCHEMA:
-                db().execute(s)
+            for i, statement in enumerate(SCHEMA, 1):
+                step = f"esquema {i}/{len(SCHEMA)}"
+                db().execute(statement)
             for fn in (sync_areas, seed_types):
+                step = fn.__name__
+                statement = None
                 fn()
         except psycopg.Error as e:
-            app.logger.error(
-                "No se pudo inicializar la base de datos (%s, SQLSTATE %s): %s",
+            app.logger.exception(
+                "No se pudo inicializar la base de datos en %s (%s, SQLSTATE %s, diagnóstico %s): %r; consulta: %r",
+                step,
                 type(e).__name__,
                 e.sqlstate or "desconocido",
                 e.diag.message_primary or "sin mensaje del servidor",
+                e,
+                statement,
             )
             return err("No se pudo preparar la base de datos. Revisá la conexión y los permisos del usuario de PostgreSQL.", 503)
         _ready = True
