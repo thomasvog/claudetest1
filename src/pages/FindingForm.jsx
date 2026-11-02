@@ -21,13 +21,17 @@ function Form({ equipment, finding }) {
   })
   const [files, setFiles] = useState([])
   const [antes, setAntes] = useState(finding ? finding.photos.antes : [])
+  const [tagQuery, setTagQuery] = useState('')
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
   const set = (k) => (v) => setF((x) => ({ ...x, [k]: v }))
   const pickTag = (v) => {
     const e = equipment.find((x) => String(x.id) === v)
     setF((x) => ({ ...x, eq: v, loc: e && e.areaId ? String(e.areaId) : x.loc, zone: e && e.zone ? e.zone : x.zone }))
+    setTagQuery('')
   }
+  const filteredEquipment = equipment.filter((e) => e.tag.toLowerCase().startsWith(tagQuery.trim().toLowerCase()))
+  const selectedEquipment = equipment.find((e) => String(e.id) === f.eq)
   const extra = t && !meta.types.includes(t) && t !== meta.other ? [t] : []
   const submit = async (e) => {
     e.preventDefault(); setErr(''); setBusy(true)
@@ -48,13 +52,18 @@ function Form({ equipment, finding }) {
       <h1>{edit ? 'Editar hallazgo' : 'Nuevo hallazgo'}</h1>
       <form className="card" onSubmit={submit}>
         <Msg kind="err">{err}</Msg>
+        <Field label="Buscar TAG"><input type="search" value={tagQuery} onChange={(e) => setTagQuery(e.target.value)} placeholder="Escribí las primeras letras del TAG" /></Field>
         <Field label="Tag / equipo">
           <select value={f.eq} onChange={(e) => pickTag(e.target.value)}>
             <option value="">— Sin tag —</option>
             {edit && finding.tag && !finding.equipmentId && <option value="keep">{finding.tag} (tag anterior)</option>}
-            {equipment.map((e) => <option key={e.id} value={e.id}>{e.tag}{e.area ? ` · ${e.area}` : ''}{e.description ? ` · ${e.description}` : ''}</option>)}
+            {selectedEquipment && !filteredEquipment.some((e) => String(e.id) === f.eq) && (
+              <option value={selectedEquipment.id}>{selectedEquipment.tag}{selectedEquipment.area ? ` · ${selectedEquipment.area}` : ''}{selectedEquipment.description ? ` · ${selectedEquipment.description}` : ''} (seleccionado)</option>
+            )}
+            {filteredEquipment.map((e) => <option key={e.id} value={e.id}>{e.tag}{e.area ? ` · ${e.area}` : ''}{e.description ? ` · ${e.description}` : ''}</option>)}
           </select>
         </Field>
+        {tagQuery && !filteredEquipment.length && <p className="mu" role="status">No hay TAG que empiecen con “{tagQuery.trim()}”.</p>}
         <p className="mu" style={{ margin: '.2rem 0 0' }}>
           Al elegir un tag se completan el área y la zona, si el tag las tiene. {user.role !== 'tecnico' ? <Link to="/tags">Administrar tags</Link> : 'Si falta un tag, pedile a un supervisor que lo cargue.'}
         </p>
