@@ -75,7 +75,6 @@ export function FindingDetail() {
             <p><Link to="/hallazgos">‹ Volver a hallazgos</Link></p>
             <h1><span className="tag">{f.tag || `Hallazgo #${f.id}`}</span> <Pill kind={f.crit}>{f.crit}</Pill> <Pill kind={f.status}>{f.status}</Pill></h1>
             <Msg kind="err">{err}</Msg>
-            {user.role === 'admin' && <p><button type="button" className="btn d" disabled={deleting} onClick={remove}>{deleting ? 'Eliminando…' : 'Eliminar hallazgo'}</button></p>}
             <div className="card">
               <dl>
                 <dt>Área</dt><dd>{f.area}</dd>
@@ -110,6 +109,7 @@ export function FindingDetail() {
                 ) : <CloseForm f={f} onDone={s.reload} />}
               </div>
             </div>
+            {user.role === 'admin' && <div className="finding-delete-action"><button type="button" className="btn d" disabled={deleting} onClick={remove}>{deleting ? 'Eliminando…' : 'Eliminar hallazgo'}</button></div>}
           </>
         )
       }}

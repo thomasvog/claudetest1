@@ -123,6 +123,7 @@ p{margin:.65rem 0 1rem}
 .btn.g{background:var(--ok)}
 .btn.l{background:var(--pa);color:var(--tx);border-color:var(--ln)}
 .btn.d{background:var(--alta);color:#fff}
+.finding-delete-action{display:flex;justify-content:flex-end;margin-top:18px}
 .btn.sm{min-height:32px;padding:.35rem .65rem;font-size:11px}
 .btns{gap:8px;margin-top:14px}
 label.f{font-size:12px;font-weight:750;margin:.7rem 0 .35rem}
