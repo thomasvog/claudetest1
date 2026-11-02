@@ -30,7 +30,7 @@ function Form({ equipment, finding }) {
     setF((x) => ({ ...x, eq: v, loc: e && e.areaId ? String(e.areaId) : x.loc, zone: e && e.zone ? e.zone : x.zone }))
     setTagQuery('')
   }
-  const filteredEquipment = equipment.filter((e) => e.tag.toLowerCase().startsWith(tagQuery.trim().toLowerCase()))
+  const filteredEquipment = equipment.filter((e) => e.tag.toLowerCase().includes(tagQuery.trim().toLowerCase()))
   const selectedEquipment = equipment.find((e) => String(e.id) === f.eq)
   const extra = t && !meta.types.includes(t) && t !== meta.other ? [t] : []
   const submit = async (e) => {
