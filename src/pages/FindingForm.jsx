@@ -52,7 +52,7 @@ function Form({ equipment, finding }) {
       <h1>{edit ? 'Editar hallazgo' : 'Nuevo hallazgo'}</h1>
       <form className="card" onSubmit={submit}>
         <Msg kind="err">{err}</Msg>
-        <Field label="Buscar TAG"><input type="search" value={tagQuery} onChange={(e) => setTagQuery(e.target.value)} placeholder="Escribí las primeras letras del TAG" /></Field>
+        <Field label="Buscar TAG"><input type="search" value={tagQuery} onChange={(e) => setTagQuery(e.target.value)} placeholder="Escribí una parte del TAG para filtrarlo" /></Field>
         <Field label="Tag / equipo">
           <select value={f.eq} onChange={(e) => pickTag(e.target.value)}>
             <option value="">— Sin tag —</option>
