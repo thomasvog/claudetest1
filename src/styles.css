@@ -479,6 +479,17 @@ th,td{border-color:var(--ln)}
 .institution-action-primary{grid-column:1/-1;min-height:66px;background:#ff9900;color:#101827;box-shadow:0 5px 16px #ff990022}
 .institution-action-primary:hover{background:#ffaa22}
 .institution-action-primary svg{color:#101827}
+@media(min-width:901px){
+	.institution-card{padding:24px}
+	.institution-meta{min-height:40px}
+	.institution-divider{height:40px}
+	.institution-card h1{margin:14px 0 8px;font-size:30px}
+	.institution-description{margin-bottom:14px;font-size:15px}
+	.institution-actions{gap:9px}
+	.institution-action{min-height:46px;gap:8px;padding:10px 16px;border-radius:12px;font-size:14px}
+	.institution-action svg{width:18px;height:18px}
+	.institution-action-primary{min-height:48px}
+}
 .overdue-alert{grid-template-columns:64px minmax(0,1fr) auto;gap:18px;margin:0;padding:24px;border:1px solid #f0004f73;border-radius:22px;background:linear-gradient(135deg,#26091d 0%,#1c0719 100%);box-shadow:0 8px 24px #f0004f14,inset 0 1px 0 #ffffff09}
 .overdue-alert-icon{width:64px;height:64px;border:0;border-radius:16px;background:#f0004f2b;color:#ff8eab}
 .overdue-alert-icon svg{width:30px;height:30px}
