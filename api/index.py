@@ -401,8 +401,13 @@ def gate():
             for fn in (sync_areas, seed_types):
                 fn()
         except psycopg.Error as e:
-            app.logger.error("No se pudo inicializar la base de datos (%s)", type(e).__name__)
-            return err("No se pudo preparar la base de datos. Revisá la conexión y los permisos del usuario de Neon.", 503)
+            app.logger.error(
+                "No se pudo inicializar la base de datos (%s, SQLSTATE %s): %s",
+                type(e).__name__,
+                e.sqlstate or "desconocido",
+                e.diag.message_primary or "sin mensaje del servidor",
+            )
+            return err("No se pudo preparar la base de datos. Revisá la conexión y los permisos del usuario de PostgreSQL.", 503)
         _ready = True
     session.setdefault("csrf", secrets.token_hex(16))
     if request.method not in ("GET", "HEAD", "OPTIONS") and not hmac.compare_digest(request.headers.get("X-CSRF-Token", ""), session["csrf"]):
