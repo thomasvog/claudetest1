@@ -758,6 +758,15 @@ def finding_update(fid):
     return jsonify(ok=True)
 
 
+@app.delete("/api/findings/<int:fid>")
+@need("admin")
+def finding_delete(fid):
+    deleted = run("DELETE FROM findings WHERE id=%s RETURNING id", fid).fetchone()
+    if not deleted:
+        abort(404)
+    return jsonify(ok=True)
+
+
 def closing_values(fd):
     f = request.form
     res, ot = f.get("resolution", "").strip(), f.get("ot", "").strip() or (fd["ot"] or "")

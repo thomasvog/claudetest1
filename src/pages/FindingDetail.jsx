@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api, formData } from '../api.js'
+import { useApp } from '../App.jsx'
 import { Async, Field, Gallery, Msg, PhotoPicker, Pill, fmtDate, today, useAsync } from '../ui.jsx'
 
 function AddPhotos({ id, kind, onDone }) {
@@ -44,11 +45,26 @@ function CloseForm({ f, onDone }) {
 
 export function FindingDetail() {
   const { id } = useParams()
+  const { user } = useApp()
+  const nav = useNavigate()
   const s = useAsync(() => api.get(`/api/findings/${id}`), [id])
   const [err, setErr] = useState('')
+  const [deleting, setDeleting] = useState(false)
   const reopen = async () => {
     if (!window.confirm('¿Reabrir este hallazgo? Vuelve a quedar pendiente.')) return
     try { await api.post(`/api/findings/${id}/reopen`); s.reload() } catch (x) { setErr(x.message) }
+  }
+  const remove = async () => {
+    if (!window.confirm('¿Eliminar este hallazgo y todas sus fotos? Esta acción no se puede deshacer.')) return
+    setErr('')
+    setDeleting(true)
+    try {
+      await api.del(`/api/findings/${id}`)
+      nav('/hallazgos')
+    } catch (x) {
+      setErr(x.message)
+      setDeleting(false)
+    }
   }
   return (
     <Async s={s}>
@@ -59,6 +75,7 @@ export function FindingDetail() {
             <p><Link to="/hallazgos">‹ Volver a hallazgos</Link></p>
             <h1><span className="tag">{f.tag || `Hallazgo #${f.id}`}</span> <Pill kind={f.crit}>{f.crit}</Pill> <Pill kind={f.status}>{f.status}</Pill></h1>
             <Msg kind="err">{err}</Msg>
+            {user.role === 'admin' && <p><button type="button" className="btn d" disabled={deleting} onClick={remove}>{deleting ? 'Eliminando…' : 'Eliminar hallazgo'}</button></p>}
             <div className="card">
               <dl>
                 <dt>Área</dt><dd>{f.area}</dd>

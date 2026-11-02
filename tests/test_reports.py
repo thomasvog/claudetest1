@@ -32,6 +32,20 @@ class ReadOnlyDatabase:
         return CursorResult(None)
 
 
+class FindingDeletionDatabase:
+    def __init__(self, deleted_id=41):
+        self.deleted_id = deleted_id
+        self.statements = []
+
+    def execute(self, statement, params=()):
+        self.statements.append((statement, params))
+        if "SELECT role, active, name FROM users WHERE id=%s" in statement:
+            return CursorResult({"role": backend.session.get("role"), "active": True, "name": "Usuario de prueba"})
+        if statement == "DELETE FROM findings WHERE id=%s RETURNING id":
+            return CursorResult({"id": self.deleted_id} if self.deleted_id else None)
+        raise AssertionError("Consulta inesperada al eliminar un hallazgo")
+
+
 def finding(status="solucionado", finding_id=41):
     today = date.today()
     return {
@@ -77,12 +91,37 @@ class ReportEndpointTests(unittest.TestCase):
 
     def client_for(self, role=None):
         client = backend.app.test_client()
-        if role:
-            with client.session_transaction() as sess:
+        with client.session_transaction() as sess:
+            sess["csrf"] = "csrf-de-prueba"
+            if role:
                 sess["uid"] = 1
                 sess["role"] = role
                 sess["name"] = "Usuario de prueba"
         return client
+
+    def delete_finding(self, client):
+        return client.delete("/api/findings/41", headers={"X-CSRF-Token": "csrf-de-prueba"})
+
+    def test_deleting_finding_requires_admin_role(self):
+        for role, expected_status in ((None, 401), ("tecnico", 403), ("supervisor", 403)):
+            with self.subTest(role=role):
+                db = FindingDeletionDatabase()
+                with patch.object(backend, "db", return_value=db):
+                    response = self.delete_finding(self.client_for(role))
+                self.assertEqual(response.status_code, expected_status)
+                self.assertFalse(any("DELETE FROM findings" in sql for sql, _ in db.statements))
+
+    def test_admin_can_delete_finding_and_missing_finding_returns_404(self):
+        for deleted_id, expected_status in ((41, 200), (None, 404)):
+            with self.subTest(deleted_id=deleted_id):
+                db = FindingDeletionDatabase(deleted_id=deleted_id)
+                with patch.object(backend, "db", return_value=db):
+                    response = self.delete_finding(self.client_for("admin"))
+                self.assertEqual(response.status_code, expected_status)
+                self.assertEqual(
+                    [entry for entry in db.statements if "DELETE FROM findings" in entry[0]],
+                    [("DELETE FROM findings WHERE id=%s RETURNING id", (41,))],
+                )
 
     def fake_rows(self, sql, *params):
         if "FROM photos" in sql:

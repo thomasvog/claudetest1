@@ -39,7 +39,7 @@ Todas las rutas empiezan con `/api/`. Las que modifican datos exigen el encabeza
 
 - Sesión: `GET /me`, `POST /login`, `POST /logout`, `POST /setup`, `POST /password`.
 - Resumen: `GET /dashboard`.
-- Hallazgos: `GET/POST /findings`, `GET/PUT /findings/<id>`, `POST /findings/<id>/close|repair|reopen|photos`, `DELETE /findings/<id>/photos/<foto>`, `GET /findings/export.xlsx`, `GET /photos/<foto>`.
+- Hallazgos: `GET/POST /findings`, `GET/PUT /findings/<id>`, `DELETE /findings/<id>` (solo administrador), `POST /findings/<id>/close|repair|reopen|photos`, `DELETE /findings/<id>/photos/<foto>`, `GET /findings/export.xlsx`, `GET /photos/<foto>`.
 - Tags: `GET/POST /equipment`, `PUT/DELETE /equipment/<id>`, `POST /equipment/import`, `GET /equipment/template.xlsx`.
 - Desclasificaciones: `GET/POST /declass`, `GET /declass/<id>`, `POST /declass/<id>/photos`, `GET /dphotos/<foto>`.
 - Administración: `/areas`, `/types` (con `POST /types/<id>/move`), `/users`.
@@ -58,7 +58,7 @@ Todas las rutas empiezan con `/api/`. Las que modifican datos exigen el encabeza
 ## Reglas importantes
 
 - **N° de OT:** es opcional al cargar o editar un hallazgo y **obligatorio para cerrarlo** (también al editar la reparación).
-- Roles: Técnico (carga, edita, cierra y reabre hallazgos; registra desclasificaciones), Supervisor (además administra tags) y Administrador (además usuarios, áreas, tipos de hallazgo e importación de tags).
+- Roles: Técnico (carga, edita, cierra y reabre hallazgos; registra desclasificaciones), Supervisor (además administra tags) y Administrador (además usuarios, áreas, tipos de hallazgo, importación de tags y eliminación de hallazgos).
 - Fotos: el navegador las reduce y el servidor las comprime a 300 KB como máximo; cada envío admite hasta 4 MB (límite de Vercel).
 - Las áreas son fijas y están en la constante `AREAS` de `api/index.py`.
 
