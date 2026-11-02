@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api, formData } from '../api.js'
-import { Async, Field, Gallery, Msg, PhotoPicker, Select, today, useAsync } from '../ui.jsx'
+import { Async, digitsOnly, Field, Gallery, Msg, PhotoPicker, Select, today, useAsync } from '../ui.jsx'
 import { useApp } from '../App.jsx'
 
 function Form({ equipment, finding }) {
@@ -17,7 +17,7 @@ function Form({ equipment, finding }) {
     date: finding ? finding.date : today(),
     ftype: finding ? t || meta.other : '',
     other: finding && (!t || t === meta.other) ? finding.description : '',
-    ot: finding ? finding.ot : '',
+    ot: finding ? digitsOnly(finding.ot || '') : '',
   })
   const [files, setFiles] = useState([])
   const [antes, setAntes] = useState(finding ? finding.photos.antes : [])
@@ -63,7 +63,7 @@ function Form({ equipment, finding }) {
           <div><Field label="Zona"><Select required value={f.zone} onChange={set('zone')} placeholder="Elegir…" options={meta.zones} /></Field></div>
           <div><Field label="Criticidad"><Select required value={f.crit} onChange={set('crit')} placeholder="Elegir…" options={meta.crit} /></Field></div>
           <div><Field label="Fecha de inspección"><input type="date" value={f.date} onChange={(e) => set('date')(e.target.value)} /></Field></div>
-          <div><Field label="N° de OT" hint="(obligatorio para cerrar)"><input value={f.ot} onChange={(e) => set('ot')(e.target.value)} /></Field></div>
+          <div><Field label="N° de OT" hint="(obligatorio para cerrar)"><input type="text" inputMode="numeric" pattern="[0-9]*" value={f.ot} onChange={(e) => set('ot')(digitsOnly(e.target.value))} /></Field></div>
         </div>
         <Field label="Qué se encontró"><Select required value={f.ftype} onChange={set('ftype')} placeholder="Elegir…" options={[...meta.types, ...extra, meta.other]} /></Field>
         {isOther && <Field label="Describí el problema encontrado"><textarea required autoFocus value={f.other} onChange={(e) => set('other')(e.target.value)} /></Field>}

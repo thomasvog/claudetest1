@@ -123,6 +123,20 @@ class ReportEndpointTests(unittest.TestCase):
                     [("DELETE FROM findings WHERE id=%s RETURNING id", (41,))],
                 )
 
+    def test_finding_creation_rejects_non_numeric_ot(self):
+        with patch.object(backend, "types_list", return_value=[]):
+            values, error = backend.read_finding({"ot": "OT-41"})
+        self.assertIsNone(values)
+        self.assertEqual(error, "El N° de OT solo puede contener números.")
+
+    def test_closing_finding_rejects_non_numeric_ot(self):
+        with backend.app.test_request_context(
+            "/api/findings/41/close", method="POST", data={"resolution": "Reparación", "ot": "OT-41"}
+        ):
+            values, error = backend.closing_values({"ot": None})
+        self.assertIsNone(values)
+        self.assertEqual(error, "El N° de OT solo puede contener números.")
+
     def fake_rows(self, sql, *params):
         if "FROM photos" in sql:
             return [{"id": 9, "kind": "despues", "data": image_bytes()}]

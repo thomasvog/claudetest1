@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 export const RANK = { tecnico: 1, supervisor: 2, admin: 3 }
 export const fmtDate = (s) => (s ? s.split('-').reverse().join('/') : '')
 export const today = () => new Date().toISOString().slice(0, 10)
+export const digitsOnly = (value) => value.replace(/\D/g, '')
 
 // Carga datos de la API y permite recargarlos.
 export function useAsync(fn, deps) {

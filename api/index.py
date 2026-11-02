@@ -714,10 +714,13 @@ def read_finding(f, fd=None):
     desc = other if ft == OTHER else ft
     if ft == OTHER and not other:
         return None, "Describí el problema encontrado."
+    ot = f.get("ot", "").strip()
+    if ot and not (ot.isascii() and ot.isdigit()):
+        return None, "El N° de OT solo puede contener números."
     if not (loc.isdigit() and zone in ZONES and f.get("criticality") in CRIT and desc and (ft == OTHER or ft in names or ft == extra)):
         return None, "Completá área, zona, criticidad y qué se encontró."
     return dict(loc=int(loc), tag=tag, eqid=eqid, zone=zone, prot=prot, crit=f["criticality"], desc=desc, ft=ft,
-                date=dt(f.get("inspected_at")), ot=f.get("ot", "").strip() or None), None
+                date=dt(f.get("inspected_at")), ot=ot or None), None
 
 
 @app.post("/api/findings")
@@ -774,6 +777,8 @@ def closing_values(fd):
         return None, "Describí qué se reparó o cambió."
     if not ot:
         return None, "Cargá el N° de OT para poder cerrar el hallazgo."
+    if not (ot.isascii() and ot.isdigit()):
+        return None, "El N° de OT solo puede contener números."
     return (res, ot, dt(f.get("closed_at"))), None
 
 

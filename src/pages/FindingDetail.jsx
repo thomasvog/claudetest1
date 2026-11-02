@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api, formData } from '../api.js'
 import { useApp } from '../App.jsx'
-import { Async, Field, Gallery, Msg, PhotoPicker, Pill, fmtDate, today, useAsync } from '../ui.jsx'
+import { Async, digitsOnly, Field, Gallery, Msg, PhotoPicker, Pill, fmtDate, today, useAsync } from '../ui.jsx'
 
 function AddPhotos({ id, kind, onDone }) {
   const [files, setFiles] = useState([])
@@ -22,7 +22,7 @@ function AddPhotos({ id, kind, onDone }) {
 }
 
 function CloseForm({ f, onDone }) {
-  const [v, setV] = useState({ resolution: '', closed_at: today(), ot: f.ot })
+  const [v, setV] = useState({ resolution: '', closed_at: today(), ot: digitsOnly(f.ot || '') })
   const [files, setFiles] = useState([])
   const [err, setErr] = useState('')
   const submit = async (e) => {
@@ -34,7 +34,7 @@ function CloseForm({ f, onDone }) {
       <Msg kind="err">{err}</Msg>
       <Field label="Qué se reparó o cambió"><textarea required value={v.resolution} onChange={(e) => setV({ ...v, resolution: e.target.value })} /></Field>
       <div className="grid">
-        <div><Field label="N° de OT" hint="(obligatorio)"><input value={v.ot} onChange={(e) => setV({ ...v, ot: e.target.value })} /></Field></div>
+        <div><Field label="N° de OT" hint="(obligatorio)"><input type="text" inputMode="numeric" pattern="[0-9]*" value={v.ot} onChange={(e) => setV({ ...v, ot: digitsOnly(e.target.value) })} /></Field></div>
         <div><Field label="Fecha de cierre"><input type="date" value={v.closed_at} onChange={(e) => setV({ ...v, closed_at: e.target.value })} /></Field></div>
       </div>
       <Field label="Fotos del resultado"><PhotoPicker files={files} onChange={setFiles} /></Field>
@@ -119,7 +119,7 @@ export function FindingDetail() {
 
 function RepairForm({ f }) {
   const nav = useNavigate()
-  const [v, setV] = useState({ resolution: f.resolution || '', closed_at: f.closedAt || today(), ot: f.ot })
+  const [v, setV] = useState({ resolution: f.resolution || '', closed_at: f.closedAt || today(), ot: digitsOnly(f.ot || '') })
   const [files, setFiles] = useState([])
   const [despues, setDespues] = useState(f.photos.despues)
   const [err, setErr] = useState('')
@@ -138,7 +138,7 @@ function RepairForm({ f }) {
         <Msg kind="err">{err}</Msg>
         <Field label="Qué se reparó o cambió"><textarea required value={v.resolution} onChange={(e) => setV({ ...v, resolution: e.target.value })} /></Field>
         <div className="grid">
-          <div><Field label="N° de OT" hint="(obligatorio)"><input value={v.ot} onChange={(e) => setV({ ...v, ot: e.target.value })} /></Field></div>
+          <div><Field label="N° de OT" hint="(obligatorio)"><input type="text" inputMode="numeric" pattern="[0-9]*" value={v.ot} onChange={(e) => setV({ ...v, ot: digitsOnly(e.target.value) })} /></Field></div>
           <div><Field label="Fecha de cierre"><input type="date" value={v.closed_at} onChange={(e) => setV({ ...v, closed_at: e.target.value })} /></Field></div>
         </div>
         <Field label="Agregar fotos del resultado"><PhotoPicker files={files} onChange={setFiles} /></Field>
