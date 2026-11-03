@@ -88,22 +88,20 @@ export default function Dashboard() {
                 <StatCard tone="blue" icon="total" label="TOTAL INSPECCIONES" value={d.pending + d.solved} detail="Pendientes y solucionados" />
               </div>
               <div className="dashboard-breakdown-grid">
-                <div className="dashboard-breakdown-column">
-                  <section className="criticality-panel" aria-labelledby="criticality-title">
-                    <div className="criticality-heading"><h2 id="criticality-title">Pendientes por Criticidad</h2><span>Filtrar por nivel</span></div>
-                    <div className="criticality-grid">
-                      {['alta', 'media', 'baja'].map((c) => (
-                        <Link key={c} className={`criticality-card ${c}`} to={`/hallazgos?crit=${c}&status=pendiente`}>
-                          <span>{c.toUpperCase()}</span><b>{d.byCrit[c] || 0}</b><small>{c === 'alta' ? 'Intervención prioritaria' : c === 'media' ? 'Requieren seguimiento' : 'Seguimiento preventivo'}</small>
-                        </Link>
-                      ))}
-                    </div>
-                  </section>
+                <section className="criticality-panel dashboard-breakdown-panel" aria-labelledby="criticality-title">
+                  <div className="criticality-heading"><h2 id="criticality-title">Pendientes por Criticidad</h2><span>Filtrar por nivel</span></div>
+                  <div className="criticality-grid">
+                    {['alta', 'media', 'baja'].map((c) => (
+                      <Link key={c} className={`criticality-card ${c}`} to={`/hallazgos?crit=${c}&status=pendiente`}>
+                        <span>{c.toUpperCase()}</span><b>{d.byCrit[c] || 0}</b><small>{c === 'alta' ? 'Intervención prioritaria' : c === 'media' ? 'Requieren seguimiento' : 'Seguimiento preventivo'}</small>
+                      </Link>
+                    ))}
+                  </div>
                   <div className="dashboard-directory-link"><Link to="/hallazgos">Ver todos los hallazgos <Icon name="arrow" /></Link></div>
-                </div>
-                <section className="dashboard-area-panel" aria-labelledby="area-title">
-                  <div className="section-heading urgent-heading"><div><span className="section-kicker">DISTRIBUCIÓN</span><h2 id="area-title">Pendientes por área</h2></div><span className="section-note">{d.byArea.length} áreas</span></div>
-                  <div className="card">
+                </section>
+                <section className="criticality-panel dashboard-breakdown-panel dashboard-area-panel" aria-labelledby="area-title">
+                  <div className="criticality-heading"><h2 id="area-title">Pendientes por área</h2></div>
+                  <div className="dashboard-area-list">
                     {d.byArea.length ? d.byArea.map((a) => (
                       <div className="abar" key={a.id}>
                         <Link to={`/hallazgos?loc=${a.id}&status=pendiente`}><i className="sw" style={{ background: a.color }} />{a.name}</Link>
