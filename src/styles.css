@@ -500,6 +500,12 @@ th,td{border-color:var(--ln)}
 .institution-action-primary{grid-column:1/-1;min-height:66px;background:#ff9900;color:#101827;box-shadow:0 5px 16px #ff990022}
 .institution-action-primary:hover{background:#ffaa22}
 .institution-action-primary svg{color:#101827}
+@media(min-width:1051px){
+	.institution-card{display:grid;grid-template-columns:minmax(0,1fr) max-content;align-items:center;column-gap:32px}
+	.institution-copy{min-width:0}
+	.institution-actions{grid-template-columns:repeat(3,max-content)}
+	.institution-action-primary{grid-column:auto}
+}
 @media(min-width:901px){
 	.topbar{height:70px;gap:12px;padding-inline:clamp(16px,3vw,36px)}
 	.topbar-brand img{width:150px;height:49px;max-height:50px}
@@ -531,7 +537,7 @@ th,td{border-color:var(--ln)}
 .overdue-clear-icon{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:#10c9951e;color:#10c995}
 .overdue-clear-icon svg{width:19px;height:19px}
 .stats-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin:0}
-.stat-card{min-height:180px;padding:22px;border:1px solid #94a3b829;border-radius:20px;background:linear-gradient(145deg,#111a30 0%,#10182a 100%);box-shadow:0 8px 22px #00000026,inset 0 1px 0 #ffffff08;transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
+.stat-card{min-height:165px;padding:22px;border:1px solid #94a3b829;border-radius:20px;background:linear-gradient(145deg,#111a30 0%,#10182a 100%);box-shadow:0 8px 22px #00000026,inset 0 1px 0 #ffffff08;transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
 .stat-card:hover{transform:translateY(-2px);border-color:#94a3b85c;box-shadow:0 11px 26px #0003,inset 0 1px 0 #ffffff08}
 .stat-label{max-width:calc(100% - 44px);min-height:24px;color:#94a3b8;font-size:12px;letter-spacing:.9px}
 .stat-icon{top:20px;right:20px;width:38px;height:38px;border:1px solid #94a3b829;border-radius:12px;background:#94a3b80a}

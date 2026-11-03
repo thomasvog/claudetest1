@@ -43,13 +43,15 @@ export default function Dashboard() {
   return (
     <div className="dashboard-page">
       <section className="institution-card" aria-labelledby="institution-title">
-        <div className="institution-meta">
-          <div className="institution-standard"><span>NORMATIVA</span><b>IEC/IECEx 60079</b></div>
-          <span className="institution-divider" aria-hidden="true" />
-          <div className="institution-scope"><span>SUPERVISIÓN DE</span><b>INTEGRIDAD EN PLANTA</b></div>
+        <div className="institution-copy">
+          <div className="institution-meta">
+            <div className="institution-standard"><span>NORMATIVA</span><b>IEC/IECEx 60079</b></div>
+            <span className="institution-divider" aria-hidden="true" />
+            <div className="institution-scope"><span>SUPERVISIÓN DE</span><b>INTEGRIDAD EN PLANTA</b></div>
+          </div>
+          <h1 id="institution-title">Monitoreo de Integridad Eléctrica en Áreas Clasificadas</h1>
+          <p className="institution-description">Control de hallazgos eléctricos en atmósferas explosivas (gases y polvos combustibles) y desclasificaciones.</p>
         </div>
-        <h1 id="institution-title">Monitoreo de Integridad Eléctrica en Áreas Clasificadas</h1>
-        <p className="institution-description">Control de hallazgos eléctricos en atmósferas explosivas (gases y polvos combustibles) y desclasificaciones.</p>
         <div className={`institution-actions${canReports ? ' with-reports' : ''}`}>
           {canReports && <Link className="institution-action" to="/informes"><Icon name="pdf" />Informes PDF</Link>}
           <a className="institution-action" href="/api/findings/export.xlsx"><Icon name="excel" />Exportar Excel</a>
@@ -85,7 +87,7 @@ export default function Dashboard() {
                 <StatCard to="/hallazgos?status=pendiente" tone="orange" icon="pending" label="PENDIENTES" value={d.pending} detail="Requieren acción técnica" />
                 <StatCard to="/hallazgos?status=solucionado" tone="green" icon="solved" label="SOLUCIONADOS" value={d.solved} detail={d.resolutionRate == null ? 'Sin registros todavía' : null} percentage={d.resolutionRate} progress={progress} />
                 <StatCard to="/hallazgos?crit=alta&status=pendiente" tone="red" icon="high" label="RIESGO ALTO" value={high} detail="Pendientes de criticidad alta" />
-                <StatCard tone="blue" icon="total" label="TOTAL INSPECCIONES" value={d.pending + d.solved} detail="Pendientes y solucionados" />
+                <StatCard tone="blue" icon="total" label="TOTAL DE HALLAZGOS" value={d.pending + d.solved} detail="Pendientes y solucionados" />
               </div>
               <div className="dashboard-breakdown-grid">
                 <section className="criticality-panel dashboard-breakdown-panel" aria-labelledby="criticality-title">
