@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api, formData } from '../api.js'
 import { useApp } from '../App.jsx'
 import { Async, digitsOnly, Field, Gallery, Msg, PhotoPicker, Pill, fmtDate, today, useAsync } from '../ui.jsx'
+import PdfPreview from '../PdfPreview.jsx'
 
 function FindingReportPreview({ report, onClose }) {
   useEffect(() => {
@@ -20,9 +21,9 @@ function FindingReportPreview({ report, onClose }) {
           <b>Previsualización del informe</b>
           <button type="button" className="btn l sm" onClick={onClose} aria-label="Cerrar previsualización">Cerrar ×</button>
         </header>
-        <object className="report-preview-document" data={report.url} type="application/pdf" aria-label="Informe PDF del hallazgo">
-          <p>Este navegador no puede mostrar el PDF aquí. <a href={report.url} target="_blank" rel="noreferrer">Abrir el informe en otra pestaña</a>.</p>
-        </object>
+        <div className="report-preview-content">
+          <PdfPreview data={report.data} />
+        </div>
         <footer className="report-preview-footer">
           <a className="btn y sm" href={report.url} download={report.filename}>Descargar PDF</a>
           <a className="btn l sm" href={report.url} target="_blank" rel="noreferrer">Abrir en otra pestaña</a>
@@ -110,7 +111,8 @@ export function FindingDetail() {
       }
       const disposition = response.headers.get('Content-Disposition') || ''
       const filename = disposition.match(/filename="?([^";]+)"?/i)?.[1] || `hallazgo_${id}.pdf`
-      setReportPreview({ url: URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' })), filename })
+      const blob = new Blob([bytes], { type: 'application/pdf' })
+      setReportPreview({ url: URL.createObjectURL(blob), filename, data: new Uint8Array(bytes) })
     } catch (previewError) {
       setReportError(previewError.message || 'No se pudo generar la previsualización. Intentá nuevamente.')
     } finally {
