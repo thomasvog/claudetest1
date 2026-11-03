@@ -603,7 +603,7 @@ th,td{border-color:var(--ln)}
 	.overdue-alert-copy p{font-size:15px}
 	.overdue-alert-action{grid-column:2;justify-self:start;min-height:48px}
 	.stats-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
-	.stat-card{min-height:170px;padding:20px;border-radius:20px}
+	.stat-card{min-height:148px;padding:20px;border-radius:20px}
 	.stat-icon{top:17px;right:17px;width:34px;height:34px}
 	.stat-label{font-size:11px}
 	.stat-value{font-size:36px}
@@ -639,7 +639,7 @@ th,td{border-color:var(--ln)}
 	.overdue-alert-copy>b{font-size:17px}
 	.overdue-alert-copy p{font-size:14px}
 	.stats-grid{gap:12px}
-	.stat-card{min-height:160px;padding:15px}
+	.stat-card{min-height:140px;padding:15px}
 	.stat-icon{top:13px;right:13px;width:30px;height:30px}
 	.stat-value{font-size:32px}
 	.stat-detail{font-size:12px}
