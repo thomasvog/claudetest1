@@ -503,8 +503,8 @@ th,td{border-color:var(--ln)}
 @media(min-width:1051px){
 	.institution-card{display:grid;grid-template-columns:minmax(0,1fr) max-content;align-items:center;column-gap:32px}
 	.institution-copy{min-width:0}
-	.institution-actions{grid-template-columns:repeat(3,max-content)}
-	.institution-action-primary{grid-column:auto}
+	.institution-actions{grid-template-columns:repeat(2,max-content)}
+	.institution-action-primary{grid-column:1/-1}
 }
 @media(min-width:901px){
 	.topbar{height:70px;gap:12px;padding-inline:clamp(16px,3vw,36px)}
