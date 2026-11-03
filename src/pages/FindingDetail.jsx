@@ -1,8 +1,35 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api, formData } from '../api.js'
 import { useApp } from '../App.jsx'
 import { Async, digitsOnly, Field, Gallery, Msg, PhotoPicker, Pill, fmtDate, today, useAsync } from '../ui.jsx'
+
+function FindingReportPreview({ report, onClose }) {
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [onClose])
+
+  return (
+    <div className="report-preview-backdrop" onClick={(event) => { if (event.target === event.currentTarget) onClose() }}>
+      <section className="report-preview" role="dialog" aria-modal="true" aria-label="Previsualización del informe PDF">
+        <header className="report-preview-header">
+          <b>Previsualización del informe</b>
+          <button type="button" className="btn l sm" onClick={onClose} aria-label="Cerrar previsualización">Cerrar ×</button>
+        </header>
+        <iframe src={report.url} title="Informe PDF del hallazgo" />
+        <footer className="report-preview-footer">
+          <a className="btn y sm" href={report.url} download={report.filename}>Descargar PDF</a>
+          <a className="btn l sm" href={report.url} target="_blank" rel="noreferrer">Abrir en otra pestaña</a>
+          <button type="button" className="btn l sm" onClick={onClose}>Cerrar</button>
+        </footer>
+      </section>
+    </div>
+  )
+}
 
 function AddPhotos({ id, kind, onDone }) {
   const [files, setFiles] = useState([])
@@ -50,6 +77,44 @@ export function FindingDetail() {
   const s = useAsync(() => api.get(`/api/findings/${id}`), [id])
   const [err, setErr] = useState('')
   const [deleting, setDeleting] = useState(false)
+  const [reportBusy, setReportBusy] = useState(false)
+  const [reportError, setReportError] = useState('')
+  const [reportPreview, setReportPreview] = useState(null)
+  useEffect(() => {
+    if (!reportPreview) return undefined
+    return () => URL.revokeObjectURL(reportPreview.url)
+  }, [reportPreview])
+  const previewReport = async () => {
+    setReportBusy(true)
+    setReportError('')
+    try {
+      const response = await fetch(`/api/reports/findings/${id}.pdf`, {
+        credentials: 'same-origin',
+        headers: { Accept: 'application/pdf' },
+      })
+      const bytes = await response.arrayBuffer()
+      if (!response.ok) {
+        let message = `No se pudo generar el PDF (HTTP ${response.status}).`
+        try {
+          const body = JSON.parse(new TextDecoder().decode(bytes))
+          if (body.error) message = body.error
+        } catch { /* el servidor puede responder HTML ante un error de infraestructura */ }
+        throw new Error(message)
+      }
+      const mime = (response.headers.get('Content-Type') || '').split(';')[0].trim().toLowerCase()
+      const signature = new TextDecoder().decode(bytes.slice(0, 5))
+      if (mime !== 'application/pdf' || signature !== '%PDF-') {
+        throw new Error('El servidor no devolvió un archivo PDF válido. Revisá los registros de la API.')
+      }
+      const disposition = response.headers.get('Content-Disposition') || ''
+      const filename = disposition.match(/filename="?([^";]+)"?/i)?.[1] || `hallazgo_${id}.pdf`
+      setReportPreview({ url: URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' })), filename })
+    } catch (previewError) {
+      setReportError(previewError.message || 'No se pudo generar la previsualización. Intentá nuevamente.')
+    } finally {
+      setReportBusy(false)
+    }
+  }
   const reopen = async () => {
     if (!window.confirm('¿Reabrir este hallazgo? Vuelve a quedar pendiente.')) return
     try { await api.post(`/api/findings/${id}/reopen`); s.reload() } catch (x) { setErr(x.message) }
@@ -100,16 +165,18 @@ export function FindingDetail() {
                     <p style={{ whiteSpace: 'pre-wrap' }}>{f.resolution}</p>
                     <Gallery ids={f.photos.despues} base="/api/photos" />
                     <div className="btns" style={{ marginBottom: '.6rem' }}>
-                      <a className="btn y" href={`/api/reports/findings/${f.id}.pdf`}>Generar informe PDF</a>
+                      <button type="button" className="btn y" onClick={previewReport} disabled={reportBusy}>{reportBusy ? 'Generando PDF…' : 'Previsualizar informe PDF'}</button>
                       <Link className="btn l" to={`/hallazgos/${f.id}/reparacion`}>Editar reparación</Link>
                       <button type="button" className="btn l" onClick={reopen}>Reabrir hallazgo</button>
                     </div>
+                    <Msg kind="err">{reportError}</Msg>
                     <AddPhotos id={f.id} kind="despues" onDone={s.reload} />
                   </>
                 ) : <CloseForm f={f} onDone={s.reload} />}
               </div>
             </div>
             {user.role === 'admin' && <div className="finding-delete-action"><button type="button" className="btn d" disabled={deleting} onClick={remove}>{deleting ? 'Eliminando…' : 'Eliminar hallazgo'}</button></div>}
+            {reportPreview && <FindingReportPreview report={reportPreview} onClose={() => setReportPreview(null)} />}
           </>
         )
       }}
