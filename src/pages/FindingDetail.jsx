@@ -20,7 +20,9 @@ function FindingReportPreview({ report, onClose }) {
           <b>Previsualización del informe</b>
           <button type="button" className="btn l sm" onClick={onClose} aria-label="Cerrar previsualización">Cerrar ×</button>
         </header>
-        <iframe src={report.url} title="Informe PDF del hallazgo" />
+        <object className="report-preview-document" data={report.url} type="application/pdf" aria-label="Informe PDF del hallazgo">
+          <p>Este navegador no puede mostrar el PDF aquí. <a href={report.url} target="_blank" rel="noreferrer">Abrir el informe en otra pestaña</a>.</p>
+        </object>
         <footer className="report-preview-footer">
           <a className="btn y sm" href={report.url} download={report.filename}>Descargar PDF</a>
           <a className="btn l sm" href={report.url} target="_blank" rel="noreferrer">Abrir en otra pestaña</a>
