@@ -465,6 +465,7 @@ th,td{border-color:var(--ln)}
 .topbar-brand:active{transform:scale(.97)}
 @media(hover:hover) and (pointer:fine){
 	.topbar-brand:hover{transform:scale(1.04)}
+	.topbar-brand:hover:active{transform:scale(.97)}
 }
 .topbar-context{display:none}
 .topbar-actions{display:flex;align-items:center;gap:10px;margin-left:auto}
@@ -579,11 +580,11 @@ th,td{border-color:var(--ln)}
 	.stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media(max-width:700px){
-	.topbar{height:76px;padding:8px 20px;gap:8px}
-	.topbar-brand img{width:clamp(128px,46vw,175px);height:auto;max-height:60px}
+	.topbar{height:70px;padding:8px 20px;gap:8px}
+	.topbar-brand img{width:clamp(120px,43vw,165px);height:auto;max-height:54px}
 	.topbar-actions{gap:8px}
-	.topbar-quick-add{width:52px;height:52px;border-radius:15px}
-	.topbar .mobile-menu{width:52px;min-width:52px;height:52px;gap:0;padding:0;border-radius:15px}
+	.topbar-quick-add{width:48px;height:48px;border-radius:14px}
+	.topbar .mobile-menu{width:48px;min-width:48px;height:48px;gap:0;padding:0;border-radius:14px}
 	.topbar .mobile-menu span{display:none}
 	.page-content:has(.dashboard-page){padding:20px}
 	.dashboard-page{gap:24px}
@@ -599,6 +600,9 @@ th,td{border-color:var(--ln)}
 	.institution-actions{grid-template-columns:minmax(0,1fr)}
 	.institution-action{width:100%;min-height:58px;justify-content:flex-start;padding:15px 18px;font-size:16px}
 	.institution-action-primary{grid-column:auto;min-height:62px;justify-content:center}
+	.institution-actions.with-reports{grid-template-columns:repeat(2,minmax(0,1fr))}
+	.institution-actions.with-reports .institution-action{min-height:50px;justify-content:center;padding:10px 8px;font-size:13px;white-space:nowrap}
+	.institution-actions.with-reports .institution-action-primary{grid-column:1/-1;min-height:56px}
 	.institution-actions .institution-action:first-child{justify-content:center}
 	.institution-actions .institution-action[href="/api/findings/export.xlsx"]{justify-content:center}
 	.overdue-alert{grid-template-columns:54px minmax(0,1fr);gap:14px;padding:22px;border-radius:22px}
@@ -625,12 +629,14 @@ th,td{border-color:var(--ln)}
 }
 @media(max-width:390px){
 	.topbar{padding-inline:14px}
-	.topbar-brand img{width:clamp(112px,40vw,155px)}
-	.topbar-quick-add{width:46px;height:46px}
-	.topbar .mobile-menu{width:46px;min-width:46px;height:46px;padding:0}
+	.topbar-brand img{width:clamp(108px,38vw,148px)}
+	.topbar-quick-add{width:44px;height:44px}
+	.topbar .mobile-menu{width:44px;min-width:44px;height:44px;padding:0}
 	.topbar .mobile-menu svg{width:18px;height:18px}
 	.page-content:has(.dashboard-page){padding-inline:16px}
 	.institution-card{padding:22px}
+	.institution-actions.with-reports .institution-action{gap:6px;padding-inline:5px;font-size:12px}
+	.institution-actions.with-reports .institution-action svg{width:18px;height:18px}
 	.institution-meta{gap:10px}
 	.institution-standard{font-size:12px;letter-spacing:.5px}
 	.institution-standard span,.institution-scope span{font-size:9px}

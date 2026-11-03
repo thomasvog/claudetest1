@@ -50,7 +50,7 @@ export default function Dashboard() {
         </div>
         <h1 id="institution-title">Monitoreo de Integridad Eléctrica en Áreas Clasificadas</h1>
         <p className="institution-description">Control de hallazgos eléctricos en atmósferas explosivas (gases y polvos combustibles) y desclasificaciones.</p>
-        <div className="institution-actions">
+        <div className={`institution-actions${canReports ? ' with-reports' : ''}`}>
           {canReports && <Link className="institution-action" to="/informes"><Icon name="pdf" />Informes PDF</Link>}
           <a className="institution-action" href="/api/findings/export.xlsx"><Icon name="excel" />Exportar Excel</a>
           <Link className="institution-action institution-action-primary" to="/hallazgos/nuevo"><Icon name="plus" />Cargar Hallazgo</Link>
