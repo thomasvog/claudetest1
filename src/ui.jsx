@@ -1,4 +1,5 @@
 import { Children, cloneElement, isValidElement, useCallback, useEffect, useId, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 
 export const RANK = { tecnico: 1, supervisor: 2, admin: 3 }
@@ -131,7 +132,7 @@ function FindingPhotoViewer({ f, ids, index, setIndex, onClose }) {
     return () => document.removeEventListener('keydown', onKeyDown)
   }, [f.id, ids.length, index, onClose, setIndex])
   const photoUrl = `/api/photos/${ids[index]}`
-  return (
+  return createPortal(
     <div className="photo-viewer-backdrop" onClick={(event) => { if (event.target === event.currentTarget) onClose() }}>
       <section className="photo-viewer" role="dialog" aria-modal="true" aria-label={`Fotografías del hallazgo ${f.tag || f.id}`}>
         <div className="photo-viewer-header">
@@ -150,7 +151,8 @@ function FindingPhotoViewer({ f, ids, index, setIndex, onClose }) {
           <Link className="btn y sm" to={`/hallazgos/${f.id}`}>Abrir detalle completo</Link>
         </div>
       </section>
-    </div>
+    </div>,
+    document.body
   )
 }
 
