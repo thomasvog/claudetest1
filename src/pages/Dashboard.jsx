@@ -87,26 +87,32 @@ export default function Dashboard() {
                 <StatCard to="/hallazgos?crit=alta&status=pendiente" tone="red" icon="high" label="RIESGO ALTO" value={high} detail="Pendientes de criticidad alta" />
                 <StatCard tone="blue" icon="total" label="TOTAL INSPECCIONES" value={d.pending + d.solved} detail="Pendientes y solucionados" />
               </div>
-              <section className="criticality-panel" aria-labelledby="criticality-title">
-                <div className="criticality-heading"><h2 id="criticality-title">Pendientes por Criticidad</h2><span>Filtrar por nivel</span></div>
-                <div className="criticality-grid">
-                  {['alta', 'media', 'baja'].map((c) => (
-                    <Link key={c} className={`criticality-card ${c}`} to={`/hallazgos?crit=${c}&status=pendiente`}>
-                      <span>{c.toUpperCase()}</span><b>{d.byCrit[c] || 0}</b><small>{c === 'alta' ? 'Intervención prioritaria' : c === 'media' ? 'Requieren seguimiento' : 'Seguimiento preventivo'}</small>
-                    </Link>
-                  ))}
+              <div className="dashboard-breakdown-grid">
+                <div className="dashboard-breakdown-column">
+                  <section className="criticality-panel" aria-labelledby="criticality-title">
+                    <div className="criticality-heading"><h2 id="criticality-title">Pendientes por Criticidad</h2><span>Filtrar por nivel</span></div>
+                    <div className="criticality-grid">
+                      {['alta', 'media', 'baja'].map((c) => (
+                        <Link key={c} className={`criticality-card ${c}`} to={`/hallazgos?crit=${c}&status=pendiente`}>
+                          <span>{c.toUpperCase()}</span><b>{d.byCrit[c] || 0}</b><small>{c === 'alta' ? 'Intervención prioritaria' : c === 'media' ? 'Requieren seguimiento' : 'Seguimiento preventivo'}</small>
+                        </Link>
+                      ))}
+                    </div>
+                  </section>
+                  <div className="dashboard-directory-link"><Link to="/hallazgos">Ver todos los hallazgos <Icon name="arrow" /></Link></div>
                 </div>
-              </section>
-              <div className="dashboard-directory-link"><Link to="/hallazgos">Ver todos los hallazgos <Icon name="arrow" /></Link></div>
-              <div className="section-heading urgent-heading"><div><span className="section-kicker">DISTRIBUCIÓN</span><h2>Pendientes por área</h2></div><span className="section-note">{d.byArea.length} áreas</span></div>
-              <div className="card">
-                {d.byArea.length ? d.byArea.map((a) => (
-                  <div className="abar" key={a.id}>
-                    <Link to={`/hallazgos?loc=${a.id}&status=pendiente`}><i className="sw" style={{ background: a.color }} />{a.name}</Link>
-                    <div className="tr"><i style={{ width: `${(a.n * 100) / mx}%`, background: a.color }} /></div>
-                    <b>{a.n}</b>
+                <section className="dashboard-area-panel" aria-labelledby="area-title">
+                  <div className="section-heading urgent-heading"><div><span className="section-kicker">DISTRIBUCIÓN</span><h2 id="area-title">Pendientes por área</h2></div><span className="section-note">{d.byArea.length} áreas</span></div>
+                  <div className="card">
+                    {d.byArea.length ? d.byArea.map((a) => (
+                      <div className="abar" key={a.id}>
+                        <Link to={`/hallazgos?loc=${a.id}&status=pendiente`}><i className="sw" style={{ background: a.color }} />{a.name}</Link>
+                        <div className="tr"><i style={{ width: `${(a.n * 100) / mx}%`, background: a.color }} /></div>
+                        <b>{a.n}</b>
+                      </div>
+                    )) : <p className="empty-state">No hay áreas para mostrar.</p>}
                   </div>
-                )) : <p className="empty-state">No hay áreas para mostrar.</p>}
+                </section>
               </div>
               <div className="section-heading urgent-heading"><div><span className="section-kicker">PARA SEGUIR</span><h2>Pendientes más urgentes</h2></div><Link to="/hallazgos?status=pendiente">Abrir listado <span aria-hidden="true">→</span></Link></div>
               {d.urgent.length ? d.urgent.map((u) => <FindingCard key={u.id} f={{ ...u, status: 'pendiente' }} />) : <p className="empty-state">No hay hallazgos pendientes.</p>}
