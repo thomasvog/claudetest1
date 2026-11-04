@@ -303,6 +303,55 @@ class ReportEndpointTests(unittest.TestCase):
                         self.assert_pdf_response(response)
                         self.assertGreater(len(response.data), 2500)
 
+    def test_ot_excel_endpoint_is_admin_only(self):
+        path = "/api/reports/ot.xlsx"
+        self.assertEqual(self.client_for().get(path).status_code, 401)
+        with patch.object(backend, "db", return_value=ReadOnlyDatabase()):
+            for role in ("tecnico", "supervisor"):
+                with self.subTest(role=role):
+                    self.assertEqual(self.client_for(role).get(path).status_code, 403)
+
+    def test_ot_excel_contains_only_ot_values_filtered_by_inspection_date(self):
+        statements = []
+        ot_rows = [{"ot": "00041"}, {"ot": "42"}]
+
+        def capture_rows(sql, *params):
+            statements.append((sql, params))
+            return ot_rows
+
+        with patch.object(backend, "db", return_value=ReadOnlyDatabase()), \
+             patch.object(backend, "rows", side_effect=capture_rows):
+            response = self.client_for("admin").get(
+                "/api/reports/ot.xlsx?period=month&year=2026&month=10"
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.mimetype,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        self.assertIn("numeros-ot-2026-10.xlsx", response.headers["Content-Disposition"])
+        self.assertEqual(response.headers["Cache-Control"], "private, no-store")
+        self.assertIn("inspected_at >= %s AND inspected_at < %s", statements[0][0])
+        self.assertEqual(
+            statements[0][1],
+            (date(2026, 10, 1), date(2026, 11, 1)),
+        )
+
+        workbook = backend.load_workbook(io.BytesIO(response.data), read_only=True, data_only=True)
+        worksheet = workbook.active
+        self.assertEqual(worksheet.max_column, 1)
+        self.assertEqual(list(worksheet.values), [("00041",), ("42",)])
+        workbook.close()
+
+    def test_ot_excel_endpoint_rejects_invalid_period(self):
+        with patch.object(backend, "db", return_value=ReadOnlyDatabase()):
+            response = self.client_for("admin").get(
+                "/api/reports/ot.xlsx?period=month&year=2026&month=13"
+            )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.get_json()["error"], "El mes del período no es válido.")
+
     def test_report_period_parser_returns_month_and_year_date_ranges(self):
         with backend.app.test_request_context("/api/reports/pending.pdf?period=month&year=2026&month=12"):
             month = backend.report_period_from_request()

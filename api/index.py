@@ -1648,6 +1648,41 @@ def executive_report_pdf():
     )
 
 
+@app.get("/api/reports/ot.xlsx")
+@need("admin")
+def ot_report_xlsx():
+    period = report_period_from_request()
+
+    def read():
+        query = "SELECT ot FROM findings WHERE ot IS NOT NULL AND btrim(ot) <> ''"
+        params = ()
+        if period:
+            query += " AND inspected_at >= %s AND inspected_at < %s"
+            params = (period["start"], period["end"])
+        return rows(query + " ORDER BY inspected_at, id", *params)
+
+    ot_rows = report_snapshot(read)
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Números de OT"
+    for row_number, item in enumerate(ot_rows, start=1):
+        cell = ws.cell(row=row_number, column=1, value=str(item["ot"]))
+        cell.number_format = "@"
+        cell.data_type = "s"
+    ws.column_dimensions["A"].width = 18
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    filename = "numeros-ot%s.xlsx" % ("-" + period["key"] if period else "")
+    response = send_file(
+        buf, as_attachment=True, download_name=filename,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    response.headers["Cache-Control"] = "private, no-store"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    return response
+
+
 @app.get("/api/dphotos/<int:pid>")
 @need()
 def dphoto_file(pid):

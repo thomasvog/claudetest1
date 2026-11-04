@@ -289,6 +289,7 @@ dt{font-weight:600}
 .report-download span{flex:none;font-size:16px}
 .report-alert .report-option-mark{color:var(--alta);background:#f0004f12;border-color:#f0004f45}
 .report-success .report-option-mark{color:var(--ok);background:#10c99512;border-color:#10c99540}
+.report-ot .report-option-mark{color:var(--ok);background:#10c99512;border-color:#10c99540}
 .report-executive{grid-column:1 / -1}
 @media(max-width:700px){.reports-grid{grid-template-columns:1fr}.report-executive{grid-column:auto}.report-option{padding:16px}}
 @media(max-width:700px){.overview-grid{grid-template-columns:1fr}.overview-total,.attention-card{min-height:0}.page-heading{align-items:flex-start}.dashboard-link{margin-top:28px}.section-heading{margin-top:6px}}

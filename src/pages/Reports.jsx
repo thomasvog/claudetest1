@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useApp } from '../App.jsx'
 import { Msg } from '../ui.jsx'
 
 const monthNames = [
@@ -31,6 +32,7 @@ const reports = [
 ]
 
 export default function ReportsPage() {
+  const { user } = useApp()
   const [busy, setBusy] = useState('')
   const [error, setError] = useState('')
   const now = new Date()
@@ -42,16 +44,21 @@ export default function ReportsPage() {
     const query = new URLSearchParams({ period, year })
     if (period === 'month') query.set('month', month)
     const href = `${report.href}?${query}`
+    const format = report.format || 'pdf'
+    const contentType = format === 'xlsx'
+      ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      : 'application/pdf'
+    const signature = format === 'xlsx' ? 'PK' : '%PDF-'
     setBusy(report.href)
     setError('')
     try {
       const response = await fetch(href, {
         credentials: 'same-origin',
-        headers: { Accept: 'application/pdf' },
+        headers: { Accept: contentType },
       })
       const bytes = await response.arrayBuffer()
       if (!response.ok) {
-        let message = `No se pudo generar el PDF (HTTP ${response.status}).`
+        let message = `No se pudo generar el archivo (HTTP ${response.status}).`
         try {
           const body = JSON.parse(new TextDecoder().decode(bytes))
           if (body.error) message = body.error
@@ -59,13 +66,13 @@ export default function ReportsPage() {
         throw new Error(message)
       }
       const mime = (response.headers.get('Content-Type') || '').split(';')[0].trim().toLowerCase()
-      const signature = new TextDecoder().decode(bytes.slice(0, 5))
-      if (mime !== 'application/pdf' || signature !== '%PDF-') {
-        throw new Error('El servidor no devolvió un archivo PDF válido. Revisá los registros de la API.')
+      const actualSignature = new TextDecoder().decode(bytes.slice(0, signature.length))
+      if (mime !== contentType || actualSignature !== signature) {
+        throw new Error(`El servidor no devolvió un archivo ${format.toUpperCase()} válido. Revisá los registros de la API.`)
       }
       const disposition = response.headers.get('Content-Disposition') || ''
       const filename = disposition.match(/filename="?([^";]+)"?/i)?.[1] || report.href.split('/').pop()
-      const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }))
+      const url = URL.createObjectURL(new Blob([bytes], { type: contentType }))
       const anchor = document.createElement('a')
       anchor.href = url
       anchor.download = filename
@@ -88,7 +95,7 @@ export default function ReportsPage() {
       <section className="card report-period" aria-label="Período de los informes">
         <div className="report-period-heading">
           <h2>Período del informe</h2>
-          <p>Seleccioná el alcance que se aplicará a los tres informes.</p>
+          <p>Seleccioná el alcance para los informes y la lista de OT.</p>
         </div>
         <label>
           <span>Frecuencia</span>
@@ -118,6 +125,13 @@ export default function ReportsPage() {
             <button type="button" className="btn y report-download" onClick={() => download(report)} disabled={!!busy}>{busy === report.href ? 'Generando PDF…' : report.action}<span aria-hidden="true">↓</span></button>
           </section>
         ))}
+        {user.role === 'admin' && (
+          <section className="card report-option report-ot">
+            <div className="report-option-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M5 3.5h9l5 5v12H5z" /><path d="M14 3.5v5h5M8 13h8M8 16.5h8" /></svg></div>
+            <div className="report-option-copy"><span className="section-kicker">EXCEL · PETROCUYO HAZLOC</span><h2>Números de OT</h2><p>Una sola columna con las OT registradas en hallazgos del período, según su fecha de inspección.</p></div>
+            <button type="button" className="btn y report-download" onClick={() => download({ href: '/api/reports/ot.xlsx', format: 'xlsx' })} disabled={!!busy}>{busy === '/api/reports/ot.xlsx' ? 'Generando Excel…' : 'Descargar números de OT'}<span aria-hidden="true">↓</span></button>
+          </section>
+        )}
       </div>
     </>
   )
