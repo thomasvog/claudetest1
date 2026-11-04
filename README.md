@@ -18,6 +18,8 @@ El frontend y la API comparten el mismo dominio, así que no hay que configurar 
     requirements.txt        dependencias del backend (Flask, psycopg, Pillow, openpyxl)
     api/index.py            backend
     public/logo.png         logo de la barra superior
+    public/manifest.webmanifest  datos e iconos para instalar la app
+    public/service-worker.js     caché del shell de la aplicación para uso sin conexión
     src/                    pantallas y componentes de React
 
 ## Puesta en marcha (todo desde el navegador)
@@ -32,6 +34,15 @@ Conviene crear un repositorio y un proyecto de Vercel **nuevos**, y dejar el ant
 6. Abrir la URL del proyecto e ingresar con los usuarios que ya existen.
 
 Si se usa una base de Neon **nueva y vacía**, `SETUP_KEY` debe estar definido. La primera vez, la aplicación pide ese código para crear el administrador.
+
+## Instalar en celular o computadora
+
+La aplicación se puede instalar desde el navegador cuando está publicada en una dirección HTTPS (Vercel ya proporciona HTTPS):
+
+- **Android o computadora:** abrir la aplicación en Chrome o Edge y elegir **Instalar aplicación** en el menú del navegador o en el icono de instalación de la barra de direcciones.
+- **iPhone o iPad:** abrirla en Safari, tocar **Compartir** y elegir **Agregar a pantalla de inicio**.
+
+La app instalada abre en una ventana propia. La pantalla de inicio y los archivos de la aplicación que ya se hayan cargado pueden abrirse sin conexión; las funciones que consultan o guardan datos requieren conexión con el servidor.
 
 ## Qué hace la API
 
