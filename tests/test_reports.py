@@ -8,6 +8,7 @@ from datetime import date, timedelta
 from unittest.mock import patch
 
 from PIL import Image
+from reportlab.platypus import Paragraph, Table
 
 import api.index as backend
 
@@ -185,11 +186,12 @@ class ReportEndpointTests(unittest.TestCase):
         if "GROUP BY criticality" in sql:
             return [
                 {"criticality": "alta", "count": 1},
-                {"criticality": "media", "count": 1},
-                {"criticality": "baja", "count": 1},
             ]
         if "GROUP BY l.name" in sql:
-            return [{"area": "Extrusión", "count": 2}, {"area": "Servicios", "count": 1}]
+            return [
+                {"area": "Extrusión", "total": 2, "pending": 1, "solved": 1},
+                {"area": "Servicios", "total": 1, "pending": 0, "solved": 1},
+            ]
         if "date_trunc('month'" in sql:
             if "AS month_label" not in sql:
                 raise AssertionError("El período mensual debe usar un alias compatible con PostgreSQL")
@@ -225,6 +227,20 @@ class ReportEndpointTests(unittest.TestCase):
             except zlib.error:
                 decoded.append(stream)
         return decoded
+
+    def report_story_text(self, flowables):
+        text = []
+        for flowable in flowables:
+            if isinstance(flowable, Table):
+                text.append(self.report_story_text(
+                    cell for row in flowable._cellvalues for cell in row
+                    if cell is not None
+                ))
+            elif isinstance(flowable, Paragraph):
+                text.append(flowable.text)
+            elif isinstance(flowable, str):
+                text.append(flowable)
+        return " ".join(text)
 
     def test_individual_pdf_is_available_to_each_authenticated_role(self):
         with patch.object(backend, "db", return_value=ReadOnlyDatabase()), \
@@ -394,15 +410,46 @@ class ReportEndpointTests(unittest.TestCase):
 
         self.assertIsNone(backend.report_month_chart([("2026-10", 0)]))
 
-    def test_executive_pdf_contains_rendered_vector_graphs(self):
+    def test_executive_pdf_uses_reference_layout_and_dynamic_values(self):
+        queries = []
+        summary_queries = []
+
+        def capture_rows(sql, *params):
+            queries.append(sql)
+            return self.fake_rows(sql, *params)
+
+        def capture_one(sql, *params):
+            summary_queries.append(sql)
+            return self.fake_one(sql, *params)
+
         with patch.object(backend, "db", return_value=ReadOnlyDatabase()), \
-             patch.object(backend, "one", side_effect=self.fake_one), \
-             patch.object(backend, "rows", side_effect=self.fake_rows):
+             patch.object(backend, "one", side_effect=capture_one), \
+             patch.object(backend, "rows", side_effect=capture_rows):
             response = self.client_for("supervisor").get("/api/reports/executive.pdf")
         self.assert_pdf_response(response)
-        self.assertGreaterEqual(len(re.findall(rb"/Type\s*/Page\b", response.data)), 2)
-        streams = self.decoded_pdf_streams(response.data)
-        self.assertTrue(any(stream.count(b" l") > 10 for stream in streams))
+        self.assertEqual(len(re.findall(rb"/Type\s*/Page\b", response.data)), 1)
+        summary_query = summary_queries[0]
+        area_query = next(sql for sql in queries if "GROUP BY l.name" in sql)
+        criticality_query = next(sql for sql in queries if "GROUP BY criticality" in sql)
+        self.assertIn("CURRENT_DATE - inspected_at > 30", summary_query)
+        self.assertTrue(summary_query.rstrip().endswith("FROM findings"))
+        self.assertIn("FILTER (WHERE f.status='pendiente')", area_query)
+        self.assertIn("FILTER (WHERE f.status='solucionado')", area_query)
+        self.assertIn("WHERE status='pendiente'", criticality_query)
+        story = backend.executive_report_content((
+            self.fake_one("SELECT total FROM findings"),
+            self.fake_rows("GROUP BY l.name"),
+            self.fake_rows("GROUP BY criticality"),
+        ))
+        text = self.report_story_text(story)
+        self.assertIn("INDICADORES CLAVE DE GESTIÓN", text)
+        self.assertIn("TOTAL HALLAZGOS", text)
+        self.assertIn("SOLUCIONADOS", text)
+        self.assertIn("2 (66.7%)", text)
+        self.assertIn("DISTRIBUCIÓN POR ÁREA Y ESTADO", text)
+        self.assertIn("Extrusión", text)
+        self.assertIn("Hay 1 hallazgo pendiente", text)
+        self.assertIn("no constituye evidencia", text)
 
     def test_findings_list_includes_zero_one_and_multiple_photo_ids(self):
         record = {

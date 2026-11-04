@@ -1393,97 +1393,179 @@ def report_month_chart(months):
 def report_kpi_data():
     summary = one("SELECT COUNT(*) total, COUNT(*) FILTER (WHERE status='pendiente') pending, "
                   "COUNT(*) FILTER (WHERE status='solucionado') solved, "
-                  "COUNT(*) FILTER (WHERE status='pendiente' AND CURRENT_DATE - inspected_at > 30) overdue, "
-                  "COUNT(*) FILTER (WHERE status='pendiente' AND CURRENT_DATE - inspected_at BETWEEN 15 AND 30) aged_15_30, "
-                  "AVG(closed_at - inspected_at) FILTER (WHERE status='solucionado' AND closed_at IS NOT NULL) average_days "
+                  "COUNT(*) FILTER (WHERE status='pendiente' AND CURRENT_DATE - inspected_at > 30) overdue "
                   "FROM findings")
-    criticality = rows("SELECT criticality, COUNT(*) count FROM findings GROUP BY criticality "
+    areas = rows("SELECT COALESCE(l.name, 'No registrado') area, COUNT(*) total, "
+                 "COUNT(*) FILTER (WHERE f.status='pendiente') pending, "
+                 "COUNT(*) FILTER (WHERE f.status='solucionado') solved "
+                 "FROM findings f LEFT JOIN locations l ON l.id=f.location_id "
+                 "GROUP BY l.name ORDER BY total DESC, area")
+    criticality = rows("SELECT COALESCE(criticality, 'No registrado') criticality, COUNT(*) count "
+                       "FROM findings WHERE status='pendiente' GROUP BY criticality "
                        "ORDER BY CASE criticality WHEN 'alta' THEN 0 WHEN 'media' THEN 1 WHEN 'baja' THEN 2 ELSE 3 END")
-    areas = rows("SELECT COALESCE(l.name, 'No registrado') area, COUNT(*) count FROM findings f "
-                 "LEFT JOIN locations l ON l.id=f.location_id GROUP BY l.name ORDER BY count DESC, area")
-    month_rows = rows("SELECT to_char(date_trunc('month', inspected_at), 'YYYY-MM') AS month_label, COUNT(*) count FROM findings "
-                      "WHERE inspected_at >= date_trunc('month', CURRENT_DATE) - INTERVAL '11 months' "
-                      "GROUP BY 1 ORDER BY 1")
-    counts = {str(item["criticality"] or "No registrado").lower(): int(item["count"]) for item in criticality}
-    monthly = {item["month_label"]: int(item["count"]) for item in month_rows}
-    current = date.today().replace(day=1)
-    labels = []
-    for _ in range(12):
-        labels.insert(0, current.strftime("%Y-%m"))
-        current = current.replace(year=current.year - (current.month == 1), month=12 if current.month == 1 else current.month - 1)
-    months = [(label, monthly.get(label, 0)) for label in labels]
-    return summary, counts, areas, months, criticality
+    return summary, areas, criticality
 
 
 def executive_report_content(data):
-    summary, critical_counts, areas, months, critical_rows = data
+    summary, areas, critical_rows = data
     styles = pdf_styles()
     total = int(summary["total"])
     pending = int(summary["pending"])
     solved = int(summary["solved"])
     percentage = (solved / total * 100) if total else None
-    average = summary["average_days"]
-    if average is not None:
-        average = float(average)
-    kpis = [
-        ("Total de hallazgos", total),
-        ("Hallazgos pendientes", pending),
-        ("Hallazgos solucionados", solved),
-        ("Porcentaje de resolución", "%.1f%%" % percentage if percentage is not None else "No registrado"),
-        ("Criticidad alta", critical_counts.get("alta", 0)),
-        ("Criticidad media", critical_counts.get("media", 0)),
-        ("Criticidad baja", critical_counts.get("baja", 0)),
-        ("Pendientes con más de 30 días", int(summary["overdue"])),
-        ("Pendientes de 15 a 30 días", int(summary["aged_15_30"])),
-        ("Tiempo promedio de resolución", "%.1f días" % average if average is not None else "No registrado"),
-    ]
-    table_data = [[pdf_paragraph("Indicador", styles["table_head"]), pdf_paragraph("Resultado", styles["table_head"])]]
-    for label, value in kpis:
-        table_data.append([pdf_paragraph(label, styles["table"]), pdf_paragraph(value, styles["table"])])
-    kpi_table = LongTable(table_data, colWidths=[112 * mm, 66 * mm], repeatRows=1)
-    kpi_table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), PDF_NAVY), ("GRID", (0, 0), (-1, -1), 0.35, PDF_LINE),
-        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F4F6F9")]),
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("LEFTPADDING", (0, 0), (-1, -1), 5), ("RIGHTPADDING", (0, 0), (-1, -1), 5),
-        ("TOPPADDING", (0, 0), (-1, -1), 4), ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-    ]))
-    content = [pdf_paragraph("Resumen de indicadores", styles["section"]), kpi_table,
-               pdf_paragraph("Pendientes versus solucionados", styles["section"]), report_status_chart(pending, solved)]
-    critical_labels = [str(row["criticality"] or "No registrado").capitalize() for row in critical_rows]
-    critical_values = [int(row["count"]) for row in critical_rows]
-    critical_chart = report_criticality_chart(critical_labels, critical_values)
-    content.append(pdf_paragraph("Distribución por criticidad", styles["section"]))
-    content.append(critical_chart or pdf_paragraph("No hay hallazgos para graficar.", styles["muted"]))
-    content.append(pdf_paragraph("Distribución por área o sector", styles["section"]))
-    area_chart = report_area_chart(areas)
-    content.append(area_chart or pdf_paragraph("No hay hallazgos para graficar.", styles["muted"]))
-    content.append(pdf_paragraph("Evolución mensual de hallazgos", styles["section"]))
-    month_chart = report_month_chart(months)
-    content.append(month_chart or pdf_paragraph("No hay información histórica suficiente en los últimos 12 meses para graficar.", styles["muted"]))
+    overdue = int(summary["overdue"])
+    critical_counts = {
+        str(row["criticality"] or "No registrado").lower(): int(row["count"])
+        for row in critical_rows
+    }
 
+    section_style = ParagraphStyle(
+        "ExecutiveReportSection", parent=styles["section"], fontSize=9, leading=11,
+        spaceBefore=2.5 * mm, spaceAfter=1.5 * mm,
+    )
+    card_label = ParagraphStyle(
+        "ExecutiveReportKpiLabel", fontName="Helvetica-Bold", fontSize=6.5,
+        leading=8, textColor=PDF_MUTED, alignment=TA_CENTER,
+    )
+    card_value = ParagraphStyle(
+        "ExecutiveReportKpiValue", fontName="Helvetica-Bold", fontSize=17,
+        leading=20, textColor=PDF_NAVY, alignment=TA_CENTER,
+    )
+    subtitle_style = ParagraphStyle(
+        "ExecutiveReportSubtitle", fontName="Helvetica", fontSize=8,
+        leading=10, textColor=PDF_MUTED, spaceAfter=1 * mm,
+    )
+    signature_style = ParagraphStyle(
+        "ExecutiveReportSignature", fontName="Helvetica-Bold", fontSize=6.5,
+        leading=8, textColor=PDF_NAVY, alignment=TA_CENTER,
+    )
+    content = [
+        Paragraph("Estado consolidado de hallazgos registrados para equipos en áreas clasificadas", subtitle_style),
+        pdf_paragraph("1. INDICADORES CLAVE DE GESTIÓN (KPIs)", section_style),
+    ]
+
+    kpis = [
+        ("TOTAL HALLAZGOS", str(total), PDF_NAVY),
+        ("SOLUCIONADOS", "%s (%s)" % (solved, "%.1f%%" % percentage if percentage is not None else "N/D"), PDF_GREEN),
+        ("PENDIENTES", str(pending), PDF_ORANGE),
+        ("PENDIENTES >30 DÍAS", str(overdue), PDF_RED),
+    ]
+    available = A4[0] - 32 * mm
+    card_width = available / len(kpis)
+    cards = []
+    for label, value, accent in kpis:
+        card = Table([
+            [Paragraph(escape(label), card_label)],
+            [Paragraph(escape(value), card_value)],
+        ], colWidths=[card_width - 4 * mm])
+        card.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F4F6F9")),
+            ("BOX", (0, 0), (-1, -1), 0.5, PDF_LINE),
+            ("LINEBEFORE", (0, 0), (0, -1), 2, accent),
+            ("LEFTPADDING", (0, 0), (-1, -1), 3 * mm),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 2 * mm),
+            ("TOPPADDING", (0, 0), (-1, 0), 2 * mm),
+            ("BOTTOMPADDING", (0, 0), (-1, 0), 1 * mm),
+            ("TOPPADDING", (0, 1), (-1, 1), 0),
+            ("BOTTOMPADDING", (0, 1), (-1, 1), 2 * mm),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ]))
+        cards.append(card)
+    kpi_table = Table([cards], colWidths=[card_width] * len(cards))
+    kpi_table.setStyle(TableStyle([
+        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 2 * mm),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+    ]))
+    content.extend([kpi_table, pdf_paragraph("2. DISTRIBUCIÓN POR ÁREA Y ESTADO", section_style)])
+
+    if areas:
+        area_data = [[
+            pdf_paragraph("Área de planta", styles["table_head"]),
+            pdf_paragraph("Total", styles["table_head"]),
+            pdf_paragraph("Pendientes", styles["table_head"]),
+            pdf_paragraph("Resueltos", styles["table_head"]),
+        ]]
+        for area in areas:
+            area_data.append([
+                pdf_paragraph(area["area"], styles["table"]),
+                pdf_paragraph(int(area["total"]), styles["table"]),
+                pdf_paragraph(int(area["pending"]), styles["table"]),
+                pdf_paragraph(int(area["solved"]), styles["table"]),
+            ])
+        area_table = LongTable(area_data, colWidths=[available * .58, available * .14, available * .14, available * .14], repeatRows=1)
+        area_table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), PDF_NAVY),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F4F6F9")]),
+            ("GRID", (0, 0), (-1, -1), 0.35, PDF_LINE),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("ALIGN", (1, 1), (-1, -1), "CENTER"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 5),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+            ("TOPPADDING", (0, 0), (-1, -1), 4),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ]))
+        content.append(area_table)
+    else:
+        content.append(pdf_paragraph("No hay hallazgos registrados para distribuir por área.", styles["muted"]))
+
+    content.append(pdf_paragraph("3. EVALUACIÓN EJECUTIVA DE CRITICIDAD", section_style))
     conclusions = []
     if total == 0:
         conclusions.append("No hay hallazgos registrados en el sistema al momento de generar este informe.")
     else:
-        conclusions.append("El sistema registra %s hallazgos: %s pendientes y %s solucionados." % (total, pending, solved))
-        if pending > solved:
-            conclusions.append("La cantidad de pendientes supera a la de solucionados.")
-        elif solved > pending:
-            conclusions.append("La cantidad de solucionados supera a la de pendientes.")
+        pending_status = "permanece pendiente" if pending == 1 else "permanecen pendientes"
+        conclusions.append("De %s hallazgos registrados, %s (%s) están solucionados y %s %s."
+                           % (total, solved, "%.1f%%" % percentage if percentage is not None else "sin porcentaje disponible",
+                              pending, pending_status))
+        high = critical_counts.get("alta", 0)
+        medium = critical_counts.get("media", 0)
+        low = critical_counts.get("baja", 0)
+        if high:
+            finding_phrase = "hallazgo pendiente" if high == 1 else "hallazgos pendientes"
+            conclusions.append("Hay %s %s de criticidad alta; se recomienda priorizar su evaluación y la programación de acciones correctivas."
+                               % (high, finding_phrase))
         else:
-            conclusions.append("La cantidad de pendientes y solucionados es equivalente.")
-        if int(summary["overdue"]):
-            conclusions.append("Hay %s hallazgos pendientes con más de 30 días de antigüedad." % int(summary["overdue"]))
-        if critical_counts.get("alta", 0):
-            conclusions.append("Se registran %s hallazgos de criticidad alta." % critical_counts["alta"])
+            conclusions.append("No se registran hallazgos pendientes de criticidad alta.")
+        if medium or low:
+            conclusions.append(
+                "Pendientes de criticidad media: %s; de criticidad baja: %s."
+                % (medium, low)
+            )
+        unclassified = critical_counts.get("no registrado", 0)
+        if unclassified:
+            finding_phrase = "hallazgo pendiente" if unclassified == 1 else "hallazgos pendientes"
+            conclusions.append("Hay %s %s sin criticidad registrada." % (unclassified, finding_phrase))
+        if overdue:
+            finding_phrase = "hallazgo pendiente" if overdue == 1 else "hallazgos pendientes"
+            conclusions.append("Hay %s %s con más de 30 días de antigüedad." % (overdue, finding_phrase))
         if areas:
-            conclusions.append("El área con mayor cantidad de hallazgos es %s (%s)." % (areas[0]["area"], areas[0]["count"]))
-    content.append(pdf_paragraph("Conclusiones basadas en los registros", styles["section"]))
+            conclusions.append("El área con mayor cantidad de hallazgos es %s (%s)." % (areas[0]["area"], areas[0]["total"]))
+    content.append(pdf_paragraph("Síntesis", styles["section"]))
     for conclusion in conclusions:
         content.append(Paragraph("- " + escape(conclusion), styles["body"]))
-    content.append(pdf_paragraph("Criterios de cálculo", styles["section"]))
-    content.append(pdf_paragraph("Cada hallazgo se cuenta una sola vez. Pendientes y solucionados son grupos disjuntos por estado. La distribución por criticidad agrupa todos los estados y sus categorías suman el total cuando todos los registros tienen una criticidad reconocida. La distribución por área agrupa cada registro por su location_id. El promedio de resolución considera únicamente hallazgos solucionados con fecha de detección y cierre registradas. El esquema actual no contiene una entidad independiente de inspecciones.", styles["small"]))
+    content.extend([
+        Spacer(1, 2 * mm),
+        pdf_paragraph(
+            "Este informe resume hallazgos registrados. Por sí solo, no constituye evidencia de inspección, prueba funcional ni aprobación de conformidad normativa.",
+            styles["muted"],
+        ),
+    ])
+    signatures = Table([
+        [Spacer(1, 8 * mm), Spacer(1, 8 * mm)],
+        [
+            Paragraph("INGENIERÍA DE CONFIABILIDAD / HAZLOC", signature_style),
+            Paragraph("SUPERVISIÓN DE MANTENIMIENTO ELÉCTRICO", signature_style),
+        ],
+    ], colWidths=[available / 2, available / 2])
+    signatures.setStyle(TableStyle([
+        ("LINEABOVE", (0, 1), (-1, 1), 0.6, PDF_MUTED),
+        ("LEFTPADDING", (0, 0), (-1, -1), 6 * mm),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 6 * mm),
+        ("TOPPADDING", (0, 1), (-1, 1), 1 * mm),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+    ]))
+    content.append(signatures)
     return content
 
 
@@ -1493,7 +1575,10 @@ def executive_report_pdf():
     data = report_snapshot(report_kpi_data)
     generated = pdf_generated_at()
     content = executive_report_content(data)
-    return pdf_download(make_report_pdf("INFORME EJECUTIVO DE KPIs", content, generated=generated), "informe-ejecutivo-kpis.pdf")
+    return pdf_download(
+        make_report_pdf("INFORME EJECUTIVO DE INTEGRIDAD ELÉCTRICA HAZLOC", content, generated=generated),
+        "informe-ejecutivo-kpis.pdf",
+    )
 
 
 @app.get("/api/dphotos/<int:pid>")
