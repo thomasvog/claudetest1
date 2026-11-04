@@ -586,6 +586,13 @@ th,td{border-color:var(--ln)}
 .dashboard-directory-link a:hover{color:#ff9900}
 .dashboard-directory-link svg{width:17px;height:17px}
 @media(min-width:1051px){
+	.overdue-alert{grid-template-columns:52px minmax(0,1fr) auto;gap:14px;padding:18px 20px;border-radius:16px}
+	.overdue-alert-icon{width:52px;height:52px;border-radius:12px}
+	.overdue-alert-icon svg{width:25px;height:25px}
+	.overdue-alert-copy .section-kicker{font-size:10px}
+	.overdue-alert-copy>b{font-size:18px}
+	.overdue-alert-copy p{font-size:13px;line-height:1.45}
+	.overdue-alert-action{min-height:40px;padding:10px 16px;border-radius:10px;font-size:12px}
 	.stats-grid .stat-card{min-height:145px;padding:18px}
 	.stats-grid .stat-card.orange{order:1}
 	.stats-grid .stat-card.red{order:2}
