@@ -587,8 +587,10 @@ th,td{border-color:var(--ln)}
 .dashboard-directory-link svg{width:17px;height:17px}
 @media(min-width:1051px){
 	.stats-grid .stat-card{min-height:145px;padding:18px}
-	.stats-grid .stat-card.green{order:3}
+	.stats-grid .stat-card.orange{order:1}
 	.stats-grid .stat-card.red{order:2}
+	.stats-grid .stat-card.green{order:3}
+	.stats-grid .stat-card.blue{order:4}
 	.stats-grid .stat-label{min-height:20px;font-size:11px}
 	.stats-grid .stat-icon{top:16px;right:16px;width:34px;height:34px}
 	.stats-grid .stat-value-line{margin:6px 0 2px}
