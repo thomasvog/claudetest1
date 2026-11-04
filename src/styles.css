@@ -182,7 +182,7 @@ dt{font-weight:600}
 .auth-brand{padding:0;color:var(--tx)}
 .theme-button{width:38px;height:38px;display:grid;place-items:center;border:1px solid var(--ln);border-radius:5px;background:var(--pa);color:var(--tx);cursor:pointer}
 .theme-button svg{width:18px;height:18px}
-.auth-layout{flex:1;width:min(1120px,100%);margin:auto;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(24px,5vw,56px);align-items:stretch;padding:32px}
+.auth-layout{flex:0 1 auto;width:min(1120px,100%);margin:auto;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(24px,5vw,56px);align-items:stretch;padding:32px}
 .auth-intro{position:relative;min-height:340px;display:flex;flex-direction:column;justify-content:center;padding:36px;overflow:hidden;border-radius:6px;background:#18372d;color:#eff5ee}
 .auth-intro:after{content:"";position:absolute;inset:0;background-image:linear-gradient(#ffffff0c 1px,transparent 1px),linear-gradient(90deg,#ffffff0c 1px,transparent 1px);background-size:28px 28px;mask-image:linear-gradient(120deg,#000,transparent 78%);pointer-events:none}
 .eyebrow{font-size:10px;font-weight:800;letter-spacing:1.3px;color:#cce57d}
