@@ -43,14 +43,14 @@ Todas las rutas empiezan con `/api/`. Las que modifican datos exigen el encabeza
 - Tags: `GET/POST /equipment`, `PUT/DELETE /equipment/<id>`, `POST /equipment/import`, `GET /equipment/template.xlsx`.
 - Desclasificaciones: `GET/POST /declass`, `GET /declass/<id>`, `POST /declass/<id>/photos`, `GET /dphotos/<foto>`.
 - Administración: `/areas`, `/types` (con `POST /types/<id>/move`), `/users`.
-- Informes (supervisor y administrador): `GET /reports/pending.pdf`, `GET /reports/solved.pdf`, `GET /reports/executive.pdf`; informe individual solucionado: `GET /reports/findings/<id>.pdf`.
+- Informes (supervisor y administrador): `GET /reports/pending.pdf`, `GET /reports/solved.pdf`, `GET /reports/executive.pdf`; admiten `period=month&year=2026&month=10` o `period=year&year=2026`. Pendientes y KPIs se filtran por fecha de detección; solucionados, por fecha de cierre. El administrador también puede descargar `GET /reports/ot.xlsx`, una columna con los números de OT de los hallazgos filtrados por fecha de inspección. Sin parámetros, se conserva el informe histórico completo. Informe individual solucionado: `GET /reports/findings/<id>.pdf`.
 
 ## Informes y situación de seguridad
 
 - Los informes se generan en el servidor con ReportLab y se entregan como `application/pdf`; los informes generales usan datos consultados en una transacción de solo lectura.
 - `vercel.json` incluye explícitamente `public/logo.png` en el paquete de la función Python para que el encabezado PDF conserve el logo al desplegar.
 - El informe individual de un hallazgo solucionado es A4 de una página. Incluye hasta cuatro miniaturas fotográficas; si hay más, el documento informa cuántas quedaron fuera para preservar la legibilidad.
-- El informe ejecutivo incorpora gráficos vectoriales. El esquema actual no registra inspecciones independientes, por lo que su total se muestra como **No registrado** en lugar de inferirse a partir de hallazgos.
+- El informe ejecutivo presenta cuatro indicadores destacados, una tabla de hallazgos por área y estado, y una síntesis dinámica de criticidad y antigüedad. Sus cifras se calculan desde los registros actuales; incluye una aclaración de que el resumen no acredita por sí solo inspecciones, pruebas funcionales ni conformidad normativa.
 - El dashboard inicia con la tarjeta institucional, presenta una alerta de pendientes de más de 30 días (o una confirmación discreta sin atrasos), cuatro indicadores y filtros por criticidad; todos los conteos de hallazgos provienen de consultas a Neon.
 - El esquema actual no registra inspecciones independientes, así que el total de inspecciones no puede inferirse con seguridad del total de hallazgos y se muestra como no disponible.
 - El listado de hallazgos recupera únicamente IDs de fotos; las miniaturas y la galería reutilizan `/api/photos/<id>`, que mantiene la autenticación existente.

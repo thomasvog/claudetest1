@@ -8,6 +8,8 @@ from datetime import date, timedelta
 from unittest.mock import patch
 
 from PIL import Image
+from reportlab.platypus import Paragraph, Table
+from werkzeug.exceptions import BadRequest
 
 import api.index as backend
 
@@ -185,11 +187,12 @@ class ReportEndpointTests(unittest.TestCase):
         if "GROUP BY criticality" in sql:
             return [
                 {"criticality": "alta", "count": 1},
-                {"criticality": "media", "count": 1},
-                {"criticality": "baja", "count": 1},
             ]
         if "GROUP BY l.name" in sql:
-            return [{"area": "Extrusión", "count": 2}, {"area": "Servicios", "count": 1}]
+            return [
+                {"area": "Extrusión", "total": 2, "pending": 1, "solved": 1},
+                {"area": "Servicios", "total": 1, "pending": 0, "solved": 1},
+            ]
         if "date_trunc('month'" in sql:
             if "AS month_label" not in sql:
                 raise AssertionError("El período mensual debe usar un alias compatible con PostgreSQL")
@@ -225,6 +228,20 @@ class ReportEndpointTests(unittest.TestCase):
             except zlib.error:
                 decoded.append(stream)
         return decoded
+
+    def report_story_text(self, flowables):
+        text = []
+        for flowable in flowables:
+            if isinstance(flowable, Table):
+                text.append(self.report_story_text(
+                    cell for row in flowable._cellvalues for cell in row
+                    if cell is not None
+                ))
+            elif isinstance(flowable, Paragraph):
+                text.append(flowable.text)
+            elif isinstance(flowable, str):
+                text.append(flowable)
+        return " ".join(text)
 
     def test_individual_pdf_is_available_to_each_authenticated_role(self):
         with patch.object(backend, "db", return_value=ReadOnlyDatabase()), \
@@ -285,6 +302,136 @@ class ReportEndpointTests(unittest.TestCase):
                         response = self.client_for(role).get(path)
                         self.assert_pdf_response(response)
                         self.assertGreater(len(response.data), 2500)
+
+    def test_ot_excel_endpoint_is_admin_only(self):
+        path = "/api/reports/ot.xlsx"
+        self.assertEqual(self.client_for().get(path).status_code, 401)
+        with patch.object(backend, "db", return_value=ReadOnlyDatabase()):
+            for role in ("tecnico", "supervisor"):
+                with self.subTest(role=role):
+                    self.assertEqual(self.client_for(role).get(path).status_code, 403)
+
+    def test_ot_excel_contains_only_ot_values_filtered_by_inspection_date(self):
+        statements = []
+        ot_rows = [{"ot": "00041"}, {"ot": "42"}]
+
+        def capture_rows(sql, *params):
+            statements.append((sql, params))
+            return ot_rows
+
+        with patch.object(backend, "db", return_value=ReadOnlyDatabase()), \
+             patch.object(backend, "rows", side_effect=capture_rows):
+            response = self.client_for("admin").get(
+                "/api/reports/ot.xlsx?period=month&year=2026&month=10"
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.mimetype,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        self.assertIn("numeros-ot-2026-10.xlsx", response.headers["Content-Disposition"])
+        self.assertEqual(response.headers["Cache-Control"], "private, no-store")
+        self.assertIn("inspected_at >= %s AND inspected_at < %s", statements[0][0])
+        self.assertEqual(
+            statements[0][1],
+            (date(2026, 10, 1), date(2026, 11, 1)),
+        )
+
+        workbook = backend.load_workbook(io.BytesIO(response.data), read_only=True, data_only=True)
+        worksheet = workbook.active
+        self.assertEqual(worksheet.max_column, 1)
+        self.assertEqual(list(worksheet.values), [("00041",), ("42",)])
+        workbook.close()
+
+    def test_ot_excel_endpoint_rejects_invalid_period(self):
+        with patch.object(backend, "db", return_value=ReadOnlyDatabase()):
+            response = self.client_for("admin").get(
+                "/api/reports/ot.xlsx?period=month&year=2026&month=13"
+            )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.get_json()["error"], "El mes del período no es válido.")
+
+    def test_report_period_parser_returns_month_and_year_date_ranges(self):
+        with backend.app.test_request_context("/api/reports/pending.pdf?period=month&year=2026&month=12"):
+            month = backend.report_period_from_request()
+        self.assertEqual(month, {
+            "start": date(2026, 12, 1), "end": date(2027, 1, 1), "key": "2026-12",
+        })
+        self.assertEqual(backend.report_period_label(month), "diciembre 2026")
+
+        with backend.app.test_request_context("/api/reports/pending.pdf?period=year&year=2026"):
+            year = backend.report_period_from_request()
+        self.assertEqual(year, {
+            "start": date(2026, 1, 1), "end": date(2027, 1, 1), "key": "2026",
+        })
+        self.assertEqual(backend.report_period_label(year), "2026")
+
+    def test_report_period_parser_rejects_invalid_period_parameters(self):
+        for query in (
+            "period=month&year=2026",
+            "period=month&year=2026&month=13",
+            "period=year&year=2026&month=1",
+            "period=week&year=2026",
+        ):
+            with self.subTest(query=query), backend.app.test_request_context(
+                "/api/reports/pending.pdf?" + query
+            ):
+                with self.assertRaises(BadRequest):
+                    backend.report_period_from_request()
+
+    def test_list_report_period_filters_detection_or_closure_date(self):
+        period = {"start": date(2026, 10, 1), "end": date(2026, 11, 1)}
+        statements = []
+
+        def capture_rows(sql, *params):
+            statements.append((sql, params))
+            return []
+
+        with patch.object(backend, "rows", side_effect=capture_rows):
+            backend.report_findings_by_status("pendiente", period)
+            backend.report_findings_by_status("solucionado", period)
+
+        self.assertIn("f.inspected_at >= %s AND f.inspected_at < %s", statements[0][0])
+        self.assertEqual(statements[0][1], ("pendiente", period["start"], period["end"], 500, 0))
+        self.assertIn("f.closed_at >= %s AND f.closed_at < %s", statements[1][0])
+        self.assertEqual(statements[1][1], ("solucionado", period["start"], period["end"], 500, 0))
+
+    def test_executive_report_period_filters_all_kpi_queries(self):
+        period = {"start": date(2026, 1, 1), "end": date(2027, 1, 1)}
+        one_queries, row_queries = [], []
+
+        def capture_one(sql, *params):
+            one_queries.append((sql, params))
+            return {"total": 0, "pending": 0, "solved": 0, "overdue": 0}
+
+        def capture_rows(sql, *params):
+            row_queries.append((sql, params))
+            return []
+
+        with patch.object(backend, "one", side_effect=capture_one), \
+             patch.object(backend, "rows", side_effect=capture_rows):
+            backend.report_kpi_data(period)
+
+        self.assertIn("WHERE inspected_at >= %s AND inspected_at < %s", one_queries[0][0])
+        self.assertEqual(one_queries[0][1], (period["start"], period["end"]))
+        self.assertIn("f.inspected_at >= %s AND f.inspected_at < %s", row_queries[0][0])
+        self.assertIn("inspected_at >= %s AND inspected_at < %s", row_queries[1][0])
+        self.assertTrue(all(params == (period["start"], period["end"]) for _, params in row_queries))
+
+    def test_report_endpoint_accepts_period_and_rejects_invalid_range(self):
+        with patch.object(backend, "db", return_value=ReadOnlyDatabase()), \
+             patch.object(backend, "rows", return_value=[]):
+            response = self.client_for("supervisor").get(
+                "/api/reports/pending.pdf?period=month&year=2026&month=10"
+            )
+            invalid = self.client_for("supervisor").get(
+                "/api/reports/pending.pdf?period=month&year=2026&month=15"
+            )
+        self.assert_pdf_response(response)
+        self.assertIn("hallazgos-pendientes-2026-10.pdf", response.headers["Content-Disposition"])
+        self.assertEqual(invalid.status_code, 400)
+        self.assertEqual(invalid.get_json()["error"], "El mes del período no es válido.")
 
     def test_database_errors_log_diagnostics_without_exposing_them_to_clients(self):
         failure = backend.psycopg.errors.UndefinedColumn("missing report column")
@@ -394,15 +541,46 @@ class ReportEndpointTests(unittest.TestCase):
 
         self.assertIsNone(backend.report_month_chart([("2026-10", 0)]))
 
-    def test_executive_pdf_contains_rendered_vector_graphs(self):
+    def test_executive_pdf_uses_reference_layout_and_dynamic_values(self):
+        queries = []
+        summary_queries = []
+
+        def capture_rows(sql, *params):
+            queries.append(sql)
+            return self.fake_rows(sql, *params)
+
+        def capture_one(sql, *params):
+            summary_queries.append(sql)
+            return self.fake_one(sql, *params)
+
         with patch.object(backend, "db", return_value=ReadOnlyDatabase()), \
-             patch.object(backend, "one", side_effect=self.fake_one), \
-             patch.object(backend, "rows", side_effect=self.fake_rows):
+             patch.object(backend, "one", side_effect=capture_one), \
+             patch.object(backend, "rows", side_effect=capture_rows):
             response = self.client_for("supervisor").get("/api/reports/executive.pdf")
         self.assert_pdf_response(response)
-        self.assertGreaterEqual(len(re.findall(rb"/Type\s*/Page\b", response.data)), 2)
-        streams = self.decoded_pdf_streams(response.data)
-        self.assertTrue(any(stream.count(b" l") > 10 for stream in streams))
+        self.assertEqual(len(re.findall(rb"/Type\s*/Page\b", response.data)), 1)
+        summary_query = summary_queries[0]
+        area_query = next(sql for sql in queries if "GROUP BY l.name" in sql)
+        criticality_query = next(sql for sql in queries if "GROUP BY criticality" in sql)
+        self.assertIn("CURRENT_DATE - inspected_at > 30", summary_query)
+        self.assertTrue(summary_query.rstrip().endswith("FROM findings"))
+        self.assertIn("FILTER (WHERE f.status='pendiente')", area_query)
+        self.assertIn("FILTER (WHERE f.status='solucionado')", area_query)
+        self.assertIn("WHERE status='pendiente'", criticality_query)
+        story = backend.executive_report_content((
+            self.fake_one("SELECT total FROM findings"),
+            self.fake_rows("GROUP BY l.name"),
+            self.fake_rows("GROUP BY criticality"),
+        ))
+        text = self.report_story_text(story)
+        self.assertIn("INDICADORES CLAVE DE GESTIÓN", text)
+        self.assertIn("TOTAL HALLAZGOS", text)
+        self.assertIn("SOLUCIONADOS", text)
+        self.assertIn("2 (66.7%)", text)
+        self.assertIn("DISTRIBUCIÓN POR ÁREA Y ESTADO", text)
+        self.assertIn("Extrusión", text)
+        self.assertIn("Hay 1 hallazgo pendiente", text)
+        self.assertIn("no constituye evidencia", text)
 
     def test_findings_list_includes_zero_one_and_multiple_photo_ids(self):
         record = {
