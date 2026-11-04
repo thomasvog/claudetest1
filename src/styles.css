@@ -70,6 +70,11 @@ dl{display:grid;grid-template-columns:max-content 1fr;gap:.35rem 1.1rem;margin:0
 .thm button{position:absolute;top:-7px;right:-7px;width:26px;height:26px;border-radius:50%;border:0;background:var(--dk);color:#fff;cursor:pointer;font-size:1rem;line-height:1}
 .ck{display:flex;gap:.6rem;align-items:center;font-weight:400;padding:.5rem .6rem;border-bottom:1px solid var(--ln);margin:0}.ck input{width:auto}
 .box{max-height:18rem;overflow:auto;border:1px solid var(--ib);border-radius:8px;background:var(--in)}
+.tag-picker{position:relative}
+.tag-picker-list{position:absolute;z-index:30;top:calc(100% + 4px);left:0;right:0;max-height:18rem;overflow:auto;border:1px solid var(--ln);border-radius:6px;background:var(--pa);box-shadow:0 8px 20px #0004}
+.tag-picker-option{padding:.55rem .75rem;cursor:pointer;font-size:13px}
+.tag-picker-option.active,.tag-picker-option:hover{background:color-mix(in srgb,var(--lk) 16%,var(--pa))}
+.tag-picker-empty{padding:.55rem .75rem;color:var(--mu);font-size:13px}
 @media(max-width:600px){main{padding:.7rem}.big{font-size:2.2rem}.logo img{height:28px}.logo{padding:.2rem .45rem}.top{padding:.5rem .7rem;gap:.4rem}}
 
 /* Sistema visual de la aplicación */
