@@ -623,6 +623,10 @@ th,td{border-color:var(--ln)}
 	.overdue-alert-copy p{font-size:15px}
 	.overdue-alert-action{grid-column:2;justify-self:start;min-height:48px}
 	.stats-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+	.stats-grid .stat-card.orange{order:1}
+	.stats-grid .stat-card.red{order:2}
+	.stats-grid .stat-card.green{order:3}
+	.stats-grid .stat-card.blue{order:4}
 	.stat-card{min-height:148px;padding:20px;border-radius:20px}
 	.stat-icon{top:17px;right:17px;width:34px;height:34px}
 	.stat-label{font-size:11px}
