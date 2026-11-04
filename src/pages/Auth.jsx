@@ -16,6 +16,7 @@ export function Login() {
   }
   return (
     <form className="card" onSubmit={submit}>
+      <img className="login-logo" src="/logo.png" alt="Petrocuyo HAZLOC" />
       <h1>Ingresar</h1>
       <Msg kind="err">{err}</Msg>
       <Field label="Usuario"><input autoFocus autoComplete="username" value={f.username} onChange={(e) => setF({ ...f, username: e.target.value })} /></Field>
