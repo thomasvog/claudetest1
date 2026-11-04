@@ -58,6 +58,7 @@ Todas las rutas empiezan con `/api/`. Las que modifican datos exigen el encabeza
 ## Reglas importantes
 
 - **N° de OT:** es opcional al cargar o editar un hallazgo y **obligatorio para cerrarlo** (también al editar la reparación).
+- **Equipos genéricos:** los tags MAC BAGGING, MAC EXTRUS, MAC POLIMERO, MAC SERVICIO y MAC UNID 500 permiten indicar el tipo de elemento (Caja de derivación, Instrumento, Junction Box o Luminaria) y su ubicación aproximada en planta al cargar un hallazgo.
 - Roles: Técnico (carga, edita, cierra y reabre hallazgos; registra desclasificaciones), Supervisor (además administra tags) y Administrador (además usuarios, áreas, tipos de hallazgo, importación de tags y eliminación de hallazgos).
 - Fotos: el navegador las reduce y el servidor las comprime a 300 KB como máximo; cada envío admite hasta 4 MB (límite de Vercel).
 - Las áreas son fijas y están en la constante `AREAS` de `api/index.py`.

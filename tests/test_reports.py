@@ -54,6 +54,8 @@ def finding(status="solucionado", finding_id=41):
         "status": status,
         "criticality": "alta",
         "finding_type": "Deterioro",
+        "equipment_type": None,
+        "equipment_location": None,
         "zone": "21",
         "protection": "Ex d",
         "inspected_at": today - timedelta(days=8),
@@ -128,6 +130,43 @@ class ReportEndpointTests(unittest.TestCase):
             values, error = backend.read_finding({"ot": "OT-41"})
         self.assertIsNone(values)
         self.assertEqual(error, "El N° de OT solo puede contener números.")
+
+    def test_generic_equipment_finding_accepts_element_and_plant_location(self):
+        equipment = {
+            "id": 9, "tag": "MAC BAGGING", "protection": None,
+            "location_id": None, "zone": None,
+        }
+        db = type("EquipmentDatabase", (), {
+            "execute": lambda self, statement, params: CursorResult(equipment),
+        })()
+        form = {
+            "equipment_id": "9", "location_id": "1", "zone": "1", "criticality": "media",
+            "finding_type": "Deterioro", "inspected_at": date.today().isoformat(),
+            "equipment_type": "Caja de derivación", "equipment_location": "Nave 2, columna B-4",
+        }
+        with patch.object(backend, "db", return_value=db), patch.object(backend, "types_list", return_value=[{"name": "Deterioro"}]):
+            values, error = backend.read_finding(form)
+        self.assertIsNone(error)
+        self.assertEqual(values["equipment_type"], "Caja de derivación")
+        self.assertEqual(values["equipment_location"], "Nave 2, columna B-4")
+
+    def test_generic_equipment_finding_rejects_unknown_element_type(self):
+        equipment = {
+            "id": 9, "tag": "MAC BAGGING", "protection": None,
+            "location_id": None, "zone": None,
+        }
+        db = type("EquipmentDatabase", (), {
+            "execute": lambda self, statement, params: CursorResult(equipment),
+        })()
+        form = {
+            "equipment_id": "9", "location_id": "1", "zone": "1", "criticality": "media",
+            "finding_type": "Deterioro", "inspected_at": date.today().isoformat(),
+            "equipment_type": "Otro elemento",
+        }
+        with patch.object(backend, "db", return_value=db), patch.object(backend, "types_list", return_value=[{"name": "Deterioro"}]):
+            values, error = backend.read_finding(form)
+        self.assertIsNone(values)
+        self.assertEqual(error, "Elegí un tipo de elemento válido.")
 
     def test_closing_finding_rejects_non_numeric_ot(self):
         with backend.app.test_request_context(
@@ -369,6 +408,7 @@ class ReportEndpointTests(unittest.TestCase):
         record = {
             "id": 41, "tag": "HAZ-041", "equipment_id": None, "location_id": 1, "zone": "1",
             "protection": None, "criticality": "media", "status": "pendiente", "finding_type": "Deterioro",
+            "equipment_type": "Instrumento", "equipment_location": "Nave 2",
             "description": "Descripción", "ot": None, "inspected_at": date.today(),
             "inspector": "Inspector", "closer": None, "closed_at": None, "resolution": None,
         }
@@ -390,6 +430,8 @@ class ReportEndpointTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         item = response.get_json()["items"][0]
         self.assertEqual(item["photoIds"], [7, 8, 9])
+        self.assertEqual(item["equipmentType"], "Instrumento")
+        self.assertEqual(item["equipmentLocation"], "Nave 2")
         self.assertNotIn("data", item)
 
         photo_rows.clear()

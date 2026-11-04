@@ -4,6 +4,9 @@ import { api, formData } from '../api.js'
 import { Async, digitsOnly, Field, Gallery, Msg, PhotoPicker, Select, today, useAsync } from '../ui.jsx'
 import { useApp } from '../App.jsx'
 
+const GENERIC_EQUIPMENT_TAGS = ['MAC BAGGING', 'MAC EXTRUS', 'MAC POLIMERO', 'MAC SERVICIO', 'MAC UNID 500']
+const GENERIC_EQUIPMENT_TYPES = ['Caja de derivación', 'Instrumento', 'Junction Box', 'Luminaria']
+
 function Form({ equipment, finding }) {
   const { meta, user } = useApp()
   const nav = useNavigate()
@@ -17,6 +20,8 @@ function Form({ equipment, finding }) {
     date: finding ? finding.date : today(),
     ftype: finding ? t || meta.other : '',
     other: finding && (!t || t === meta.other) ? finding.description : '',
+    equipmentType: finding ? finding.equipmentType || '' : '',
+    equipmentLocation: finding ? finding.equipmentLocation || '' : '',
     ot: finding ? digitsOnly(finding.ot || '') : '',
   })
   const [files, setFiles] = useState([])
@@ -27,15 +32,26 @@ function Form({ equipment, finding }) {
   const set = (k) => (v) => setF((x) => ({ ...x, [k]: v }))
   const pickTag = (v) => {
     const e = equipment.find((x) => String(x.id) === v)
-    setF((x) => ({ ...x, eq: v, loc: e && e.areaId ? String(e.areaId) : x.loc, zone: e && e.zone ? e.zone : x.zone }))
+    const tag = v === 'keep' ? finding?.tag : e?.tag
+    const generic = GENERIC_EQUIPMENT_TAGS.includes((tag || '').toUpperCase())
+    setF((x) => ({
+      ...x,
+      eq: v,
+      loc: e && e.areaId ? String(e.areaId) : x.loc,
+      zone: e && e.zone ? e.zone : x.zone,
+      equipmentType: generic ? x.equipmentType : '',
+      equipmentLocation: generic ? x.equipmentLocation : '',
+    }))
     setTagQuery('')
   }
   const filteredEquipment = equipment.filter((e) => e.tag.toLowerCase().includes(tagQuery.trim().toLowerCase()))
   const selectedEquipment = equipment.find((e) => String(e.id) === f.eq)
+  const selectedTag = f.eq === 'keep' ? finding?.tag : selectedEquipment?.tag
+  const isGenericEquipment = GENERIC_EQUIPMENT_TAGS.includes((selectedTag || '').toUpperCase())
   const extra = t && !meta.types.includes(t) && t !== meta.other ? [t] : []
   const submit = async (e) => {
     e.preventDefault(); setErr(''); setBusy(true)
-    const fields = { equipment_id: f.eq, location_id: f.loc, zone: f.zone, criticality: f.crit, inspected_at: f.date, finding_type: f.ftype, other_text: f.other, ot: f.ot }
+    const fields = { equipment_id: f.eq, location_id: f.loc, zone: f.zone, criticality: f.crit, inspected_at: f.date, finding_type: f.ftype, other_text: f.other, equipment_type: f.equipmentType, equipment_location: f.equipmentLocation, ot: f.ot }
     try {
       const body = formData(fields, { photos: files })
       const r = edit ? await api.put(`/api/findings/${finding.id}`, body) : await api.post('/api/findings', body)
@@ -63,6 +79,16 @@ function Form({ equipment, finding }) {
             {filteredEquipment.map((e) => <option key={e.id} value={e.id}>{e.tag}{e.area ? ` · ${e.area}` : ''}{e.description ? ` · ${e.description}` : ''}</option>)}
           </select>
         </Field>
+        {isGenericEquipment && (
+          <>
+            <Field label="Tipo de elemento">
+              <Select value={f.equipmentType} onChange={set('equipmentType')} placeholder="Elegir…" options={GENERIC_EQUIPMENT_TYPES} />
+            </Field>
+            <Field label="Ubicación aproximada en planta">
+              <input value={f.equipmentLocation} onChange={(e) => set('equipmentLocation')(e.target.value)} placeholder="Ej.: nave, sector o referencia cercana" />
+            </Field>
+          </>
+        )}
         {tagQuery && !filteredEquipment.length && <p className="mu" role="status">No hay TAG que empiecen con “{tagQuery.trim()}”.</p>}
         <p className="mu" style={{ margin: '.2rem 0 0' }}>
           Al elegir un tag se completan el área y la zona, si el tag las tiene. {user.role !== 'tecnico' ? <Link to="/tags">Administrar tags</Link> : 'Si falta un tag, pedile a un supervisor que lo cargue.'}
