@@ -579,11 +579,30 @@ th,td{border-color:var(--ln)}
 .dashboard-breakdown-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:24px}
 .dashboard-breakdown-panel{min-width:0;display:flex;flex-direction:column}
 .dashboard-area-list{flex:1}
+.dashboard-area-list .abar{margin:.35rem 0}
 .dashboard-page .urgent-heading{margin:0}
 .dashboard-directory-link{display:flex;justify-content:flex-end;margin-top:auto;padding-top:16px}
 .dashboard-directory-link a{display:inline-flex;align-items:center;gap:8px;color:#cbd5e1;font-size:13px;font-weight:600;text-decoration:none}
 .dashboard-directory-link a:hover{color:#ff9900}
 .dashboard-directory-link svg{width:17px;height:17px}
+@media(min-width:1051px){
+	.stats-grid .stat-card{min-height:145px;padding:18px}
+	.stats-grid .stat-card.green{order:3}
+	.stats-grid .stat-card.red{order:2}
+	.stats-grid .stat-label{min-height:20px;font-size:11px}
+	.stats-grid .stat-icon{top:16px;right:16px;width:34px;height:34px}
+	.stats-grid .stat-value-line{margin:6px 0 2px}
+	.stats-grid .stat-value{font-size:38px}
+	.stats-grid .stat-detail{font-size:13px}
+	.stats-grid .stat-progress{height:8px;margin-top:8px}
+	.dashboard-breakdown-panel{padding:20px}
+	.dashboard-breakdown-panel .criticality-heading{margin-bottom:14px}
+	.dashboard-breakdown-panel .criticality-heading h2{font-size:20px}
+	.criticality-card{min-height:112px;padding:14px}
+	.criticality-card b{font-size:31px}
+	.criticality-card small{font-size:12px}
+	.dashboard-directory-link{padding-top:12px}
+}
 @media(max-width:1050px){
 	.page-content:has(.dashboard-page){padding-inline:28px}
 	.stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
