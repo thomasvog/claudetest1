@@ -1,24 +1,29 @@
 import { useState } from 'react'
 import { Msg } from '../ui.jsx'
 
+const monthNames = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+]
+
 const reports = [
   {
     title: 'Hallazgos pendientes',
-    description: 'Listado completo priorizado por criticidad y antigüedad.',
+    description: 'Hallazgos detectados en el período, priorizados por criticidad y antigüedad.',
     href: '/api/reports/pending.pdf',
     action: 'Descargar informe de hallazgos pendientes',
     tone: 'report-alert',
   },
   {
     title: 'Hallazgos solucionados',
-    description: 'Registros cerrados ordenados por fecha de solución.',
+    description: 'Hallazgos cuya fecha de solución corresponde al período seleccionado.',
     href: '/api/reports/solved.pdf',
     action: 'Descargar informe de hallazgos solucionados',
     tone: 'report-success',
   },
   {
     title: 'Informe ejecutivo de KPIs',
-    description: 'Indicadores, distribuciones, gráficos y metodología de cálculo.',
+    description: 'Indicadores y distribuciones de hallazgos detectados en el período.',
     href: '/api/reports/executive.pdf',
     action: 'Descargar informe ejecutivo de KPIs',
     tone: 'report-executive',
@@ -28,11 +33,19 @@ const reports = [
 export default function ReportsPage() {
   const [busy, setBusy] = useState('')
   const [error, setError] = useState('')
+  const now = new Date()
+  const [period, setPeriod] = useState('month')
+  const [month, setMonth] = useState(String(now.getMonth() + 1))
+  const [year, setYear] = useState(String(now.getFullYear()))
+
   const download = async (report) => {
+    const query = new URLSearchParams({ period, year })
+    if (period === 'month') query.set('month', month)
+    const href = `${report.href}?${query}`
     setBusy(report.href)
     setError('')
     try {
-      const response = await fetch(report.href, {
+      const response = await fetch(href, {
         credentials: 'same-origin',
         headers: { Accept: 'application/pdf' },
       })
@@ -72,6 +85,31 @@ export default function ReportsPage() {
         <div><span className="section-kicker">SUPERVISIÓN</span><h1>Informes y reportes</h1><p className="page-lede">Documentos generados con los registros actuales del sistema.</p></div>
       </div>
       <Msg kind="err">{error}</Msg>
+      <section className="card report-period" aria-label="Período de los informes">
+        <div className="report-period-heading">
+          <h2>Período del informe</h2>
+          <p>Seleccioná el alcance que se aplicará a los tres informes.</p>
+        </div>
+        <label>
+          <span>Frecuencia</span>
+          <select value={period} onChange={(event) => setPeriod(event.target.value)}>
+            <option value="month">Mensual</option>
+            <option value="year">Anual</option>
+          </select>
+        </label>
+        {period === 'month' && (
+          <label>
+            <span>Mes</span>
+            <select value={month} onChange={(event) => setMonth(event.target.value)}>
+              {monthNames.map((name, index) => <option value={index + 1} key={name}>{name}</option>)}
+            </select>
+          </label>
+        )}
+        <label>
+          <span>Año</span>
+          <input type="number" min="1900" max="9998" value={year} onChange={(event) => setYear(event.target.value)} />
+        </label>
+      </section>
       <div className="reports-grid">
         {reports.map((report) => (
           <section className={`card report-option ${report.tone}`} key={report.href}>

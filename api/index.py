@@ -1056,13 +1056,59 @@ def report_snapshot(reader):
         return reader()
 
 
-def report_findings_by_status(status):
+def report_period_from_request():
+    period = request.args.get("period")
+    year_value = request.args.get("year")
+    month_value = request.args.get("month")
+    if period is None and year_value is None and month_value is None:
+        return None
+
+    def parse_number(value, name, minimum, maximum):
+        if not value or not value.isascii() or not value.isdecimal():
+            abort(400, description="El %s del período no es válido." % name)
+        number = int(value)
+        if not minimum <= number <= maximum:
+            abort(400, description="El %s del período no es válido." % name)
+        return number
+
+    if period not in ("month", "year"):
+        abort(400, description="Elegí un período mensual o anual.")
+    if period == "month":
+        year = parse_number(year_value, "año", 1900, 9998)
+        month = parse_number(month_value, "mes", 1, 12)
+        start = date(year, month, 1)
+        end = date(year + (month == 12), month % 12 + 1, 1)
+    else:
+        if month_value is not None:
+            abort(400, description="No se debe indicar un mes para un período anual.")
+        year = parse_number(year_value, "año", 1900, 9998)
+        start, end = date(year, 1, 1), date(year + 1, 1, 1)
+    return {"start": start, "end": end, "key": start.strftime("%Y-%m") if period == "month" else str(year)}
+
+
+def report_period_label(period):
+    if period is None:
+        return "Todos los períodos"
+    if period["start"].day == 1 and period["end"].month != period["start"].month:
+        month_names = (
+            "enero", "febrero", "marzo", "abril", "mayo", "junio",
+            "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+        )
+        return "%s %s" % (month_names[period["start"].month - 1], period["start"].year)
+    return str(period["start"].year)
+
+
+def report_findings_by_status(status, period=None):
     order = ("CASE f.criticality WHEN 'alta' THEN 0 WHEN 'media' THEN 1 WHEN 'baja' THEN 2 ELSE 3 END, "
              "f.inspected_at ASC, f.id ASC") if status == "pendiente" else "f.closed_at DESC NULLS LAST, f.id DESC"
+    date_column = "f.inspected_at" if status == "pendiente" else "f.closed_at"
+    date_filter = " AND %s >= %%s AND %s < %%s" % (date_column, date_column) if period else ""
     result, offset, batch_size = [], 0, 500
     while True:
-        batch = rows(REPORT_FINDING_SELECT + " WHERE f.status=%s ORDER BY " + order + " LIMIT %s OFFSET %s",
-                     status, batch_size, offset)
+        batch = rows(
+            REPORT_FINDING_SELECT + " WHERE f.status=%s" + date_filter + " ORDER BY " + order + " LIMIT %s OFFSET %s",
+            *( (status, period["start"], period["end"], batch_size, offset) if period else (status, batch_size, offset) )
+        )
         result.extend(batch)
         if len(batch) < batch_size:
             return result
@@ -1125,15 +1171,19 @@ def report_record_story(f, status, styles, content_width):
     return story
 
 
-def report_list_pdf(status, title, filename):
+def report_list_pdf(status, title, filename, period=None):
     def read():
-        return report_findings_by_status(status)
+        return report_findings_by_status(status, period)
 
     records = report_snapshot(read)
     generated = pdf_generated_at()
     styles = pdf_styles()
     width = landscape(A4)[0] - 32 * mm
-    content = [pdf_labeled("Cantidad total de hallazgos", len(records), styles["body"]), Spacer(1, 2 * mm)]
+    content = [
+        pdf_labeled("Período del informe", report_period_label(period), styles["body"]),
+        pdf_labeled("Cantidad total de hallazgos", len(records), styles["body"]),
+        Spacer(1, 2 * mm),
+    ]
     if records:
         for finding in records:
             content.extend(report_record_story(finding, status, styles, width))
@@ -1296,13 +1346,21 @@ def finding_report_pdf(fid):
 @app.get("/api/reports/pending.pdf")
 @need("supervisor")
 def pending_report_pdf():
-    return report_list_pdf("pendiente", "INFORME DE HALLAZGOS PENDIENTES", "hallazgos-pendientes.pdf")
+    period = report_period_from_request()
+    filename = "hallazgos-pendientes%s.pdf" % ("-" + period["key"] if period else "")
+    return report_list_pdf(
+        "pendiente", "INFORME DE HALLAZGOS PENDIENTES", filename, period
+    )
 
 
 @app.get("/api/reports/solved.pdf")
 @need("supervisor")
 def solved_report_pdf():
-    return report_list_pdf("solucionado", "INFORME DE HALLAZGOS SOLUCIONADOS", "hallazgos-solucionados.pdf")
+    period = report_period_from_request()
+    filename = "hallazgos-solucionados%s.pdf" % ("-" + period["key"] if period else "")
+    return report_list_pdf(
+        "solucionado", "INFORME DE HALLAZGOS SOLUCIONADOS", filename, period
+    )
 
 
 def report_status_chart(pending, solved):
@@ -1390,23 +1448,29 @@ def report_month_chart(months):
     return drawing
 
 
-def report_kpi_data():
+def report_kpi_data(period=None):
+    date_params = (period["start"], period["end"]) if period else ()
     summary = one("SELECT COUNT(*) total, COUNT(*) FILTER (WHERE status='pendiente') pending, "
                   "COUNT(*) FILTER (WHERE status='solucionado') solved, "
                   "COUNT(*) FILTER (WHERE status='pendiente' AND CURRENT_DATE - inspected_at > 30) overdue "
-                  "FROM findings")
+                  "FROM findings" + (" WHERE inspected_at >= %s AND inspected_at < %s" if period else ""),
+                  *date_params)
     areas = rows("SELECT COALESCE(l.name, 'No registrado') area, COUNT(*) total, "
                  "COUNT(*) FILTER (WHERE f.status='pendiente') pending, "
                  "COUNT(*) FILTER (WHERE f.status='solucionado') solved "
                  "FROM findings f LEFT JOIN locations l ON l.id=f.location_id "
-                 "GROUP BY l.name ORDER BY total DESC, area")
+                 + ("WHERE f.inspected_at >= %s AND f.inspected_at < %s " if period else "") +
+                 "GROUP BY l.name ORDER BY total DESC, area", *date_params)
     criticality = rows("SELECT COALESCE(criticality, 'No registrado') criticality, COUNT(*) count "
-                       "FROM findings WHERE status='pendiente' GROUP BY criticality "
-                       "ORDER BY CASE criticality WHEN 'alta' THEN 0 WHEN 'media' THEN 1 WHEN 'baja' THEN 2 ELSE 3 END")
+                       "FROM findings WHERE status='pendiente' "
+                       + ("AND inspected_at >= %s AND inspected_at < %s " if period else "") +
+                       "GROUP BY criticality "
+                       "ORDER BY CASE criticality WHEN 'alta' THEN 0 WHEN 'media' THEN 1 WHEN 'baja' THEN 2 ELSE 3 END",
+                       *date_params)
     return summary, areas, criticality
 
 
-def executive_report_content(data):
+def executive_report_content(data, period=None):
     summary, areas, critical_rows = data
     styles = pdf_styles()
     total = int(summary["total"])
@@ -1440,6 +1504,7 @@ def executive_report_content(data):
         leading=8, textColor=PDF_NAVY, alignment=TA_CENTER,
     )
     content = [
+        Paragraph("Período del informe: %s" % escape(report_period_label(period)), subtitle_style),
         Paragraph("Estado consolidado de hallazgos registrados para equipos en áreas clasificadas", subtitle_style),
         pdf_paragraph("1. INDICADORES CLAVE DE GESTIÓN (KPIs)", section_style),
     ]
@@ -1572,12 +1637,14 @@ def executive_report_content(data):
 @app.get("/api/reports/executive.pdf")
 @need("supervisor")
 def executive_report_pdf():
-    data = report_snapshot(report_kpi_data)
+    period = report_period_from_request()
+    data = report_snapshot(lambda: report_kpi_data(period))
     generated = pdf_generated_at()
-    content = executive_report_content(data)
+    content = executive_report_content(data, period)
+    filename = "informe-ejecutivo-kpis%s.pdf" % ("-" + period["key"] if period else "")
     return pdf_download(
         make_report_pdf("INFORME EJECUTIVO DE INTEGRIDAD ELÉCTRICA HAZLOC", content, generated=generated),
-        "informe-ejecutivo-kpis.pdf",
+        filename,
     )
 
 

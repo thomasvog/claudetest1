@@ -43,7 +43,7 @@ Todas las rutas empiezan con `/api/`. Las que modifican datos exigen el encabeza
 - Tags: `GET/POST /equipment`, `PUT/DELETE /equipment/<id>`, `POST /equipment/import`, `GET /equipment/template.xlsx`.
 - Desclasificaciones: `GET/POST /declass`, `GET /declass/<id>`, `POST /declass/<id>/photos`, `GET /dphotos/<foto>`.
 - Administración: `/areas`, `/types` (con `POST /types/<id>/move`), `/users`.
-- Informes (supervisor y administrador): `GET /reports/pending.pdf`, `GET /reports/solved.pdf`, `GET /reports/executive.pdf`; informe individual solucionado: `GET /reports/findings/<id>.pdf`.
+- Informes (supervisor y administrador): `GET /reports/pending.pdf`, `GET /reports/solved.pdf`, `GET /reports/executive.pdf`; admiten `period=month&year=2026&month=10` o `period=year&year=2026`. Pendientes y KPIs se filtran por fecha de detección; solucionados, por fecha de cierre. Sin parámetros, se conserva el informe histórico completo. Informe individual solucionado: `GET /reports/findings/<id>.pdf`.
 
 ## Informes y situación de seguridad
 
