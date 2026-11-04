@@ -149,6 +149,8 @@ export function FindingDetail() {
                 <dt>Área</dt><dd>{f.area}</dd>
                 <dt>Zona</dt><dd>{f.zone}{f.protection ? ` · ${f.protection}` : ''}</dd>
                 {f.type && <><dt>Tipo</dt><dd>{f.type}</dd></>}
+                {f.equipmentType && <><dt>Tipo de elemento</dt><dd>{f.equipmentType}</dd></>}
+                {f.equipmentLocation && <><dt>Ubicación aproximada en planta</dt><dd>{f.equipmentLocation}</dd></>}
                 <dt>N° de OT</dt><dd>{f.ot || <span className="mu">sin cargar</span>}</dd>
                 <dt>Inspección</dt><dd>{fmtDate(f.date)} · {f.inspector}</dd>
                 {solved && <><dt>Cierre</dt><dd>{fmtDate(f.closedAt)} · {f.closer}</dd></>}

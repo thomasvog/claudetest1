@@ -85,8 +85,8 @@ export default function Dashboard() {
               )}
               <div className="stats-grid">
                 <StatCard to="/hallazgos?status=pendiente" tone="orange" icon="pending" label="PENDIENTES" value={d.pending} detail="Requieren acción técnica" />
-                <StatCard to="/hallazgos?status=solucionado" tone="green" icon="solved" label="SOLUCIONADOS" value={d.solved} detail={d.resolutionRate == null ? 'Sin registros todavía' : null} percentage={d.resolutionRate} progress={progress} />
                 <StatCard to="/hallazgos?crit=alta&status=pendiente" tone="red" icon="high" label="RIESGO ALTO" value={high} detail="Pendientes de criticidad alta" />
+                <StatCard to="/hallazgos?status=solucionado" tone="green" icon="solved" label="SOLUCIONADOS" value={d.solved} detail={d.resolutionRate == null ? 'Sin registros todavía' : null} percentage={d.resolutionRate} progress={progress} />
                 <StatCard tone="blue" icon="total" label="TOTAL DE HALLAZGOS" value={d.pending + d.solved} detail="Pendientes y solucionados" />
               </div>
               <div className="dashboard-breakdown-grid">

@@ -55,6 +55,8 @@ app.config.update(
 AREAS = ["Polímeros", "Extrusión", "Unidad 500", "Servicios", "Bagging"]  # áreas fijas
 OTHER = "Otro"  # tipo de hallazgo con descripción libre (fijo)
 DEFAULT_TYPES = ["Falta tornillo", "Falta tapón", "Prensacable en mal estado", "Deterioro", "Polvo en superficie", "Rotura"]
+GENERIC_EQUIPMENT_TAGS = ["MAC BAGGING", "MAC EXTRUS", "MAC POLIMERO", "MAC SERVICIO", "MAC UNID 500"]
+GENERIC_EQUIPMENT_TYPES = ["Caja de derivación", "Instrumento", "Junction Box", "Luminaria"]
 ZONES = ["0", "1", "2", "20", "21", "22", "0/20", "1/21", "2/22", "Segura"]
 ZMAP = {z.lower().replace(" ", ""): z for z in ZONES}
 AREA_COLORS = ["#2563a8", "#7a4fb5", "#1aa3c8", "#5b6b7b", "#c2409b"]  # azul, violeta, celeste, gris, magenta
@@ -107,6 +109,8 @@ SCHEMA = [
     "ALTER TABLE equipment ALTER COLUMN location_id DROP NOT NULL",
     "ALTER TABLE equipment ALTER COLUMN zone DROP NOT NULL",
     "ALTER TABLE findings ADD COLUMN IF NOT EXISTS finding_type TEXT",
+    "ALTER TABLE findings ADD COLUMN IF NOT EXISTS equipment_type TEXT",
+    "ALTER TABLE findings ADD COLUMN IF NOT EXISTS equipment_location TEXT",
     "CREATE TABLE IF NOT EXISTS finding_types(id SERIAL PRIMARY KEY, name TEXT NOT NULL)",
     "CREATE UNIQUE INDEX IF NOT EXISTS ux_ft_name ON finding_types(lower(name))",
     "ALTER TABLE finding_types ADD COLUMN IF NOT EXISTS pos INT",
@@ -134,6 +138,11 @@ def seed_types():
     if run("INSERT INTO meta(key,value) VALUES('types_seeded','1') ON CONFLICT DO NOTHING RETURNING key").fetchone():
         for n in DEFAULT_TYPES:
             run("INSERT INTO finding_types(name,pos) SELECT %s, COALESCE(MAX(pos), 0) + 1 FROM finding_types ON CONFLICT DO NOTHING", n)
+
+
+def seed_generic_equipment():
+    for tag in GENERIC_EQUIPMENT_TAGS:
+        run("INSERT INTO equipment(tag,description,location_id,zone,protection) VALUES(%s,NULL,NULL,NULL,NULL) ON CONFLICT DO NOTHING", tag)
 
 
 def db():
@@ -401,7 +410,7 @@ def gate():
             for i, statement in enumerate(SCHEMA, 1):
                 step = f"esquema {i}/{len(SCHEMA)}"
                 db().execute(statement)
-            for fn in (sync_areas, seed_types):
+            for fn in (sync_areas, seed_types, seed_generic_equipment):
                 step = fn.__name__
                 statement = None
                 fn()
@@ -644,6 +653,7 @@ def security_assessment(pending, by_crit, overdue, aged_15_30, total, history_av
 def fjson(f, paths):
     return dict(id=f["id"], tag=f["tag"] or "", equipmentId=f["equipment_id"], areaId=f["location_id"], area=paths.get(f["location_id"], ""),
                 zone=f["zone"], protection=f["protection"], crit=f["criticality"], status=f["status"], type=f["finding_type"],
+                equipmentType=f["equipment_type"], equipmentLocation=f["equipment_location"],
                 description=f["description"], ot=f["ot"] or "", date=iso(f["inspected_at"]), inspector=f["inspector"], closer=f["closer"],
                 closedAt=iso(f["closed_at"]), resolution=f["resolution"])
 
@@ -694,14 +704,14 @@ def findings_export():
     wb = Workbook()
     ws = wb.active
     ws.title = "Hallazgos"
-    ws.append(["ID", "Área", "TAG / equipo", "Zona", "Protección Ex", "Criticidad", "Estado", "Tipo de hallazgo", "Descripción", "N° de OT",
+    ws.append(["ID", "Área", "TAG / equipo", "Tipo de elemento", "Ubicación aproximada en planta", "Zona", "Protección Ex", "Criticidad", "Estado", "Tipo de hallazgo", "Descripción", "N° de OT",
                "Inspector", "Fecha inspección", "Resolución", "Cerrado por", "Fecha cierre", "Fotos antes", "Fotos después"])
     cnt = {(r["finding_id"], r["kind"]): r["n"] for r in rows("SELECT finding_id, kind, COUNT(*) n FROM photos GROUP BY 1, 2")}
     for f in findings():
-        ws.append([f["id"], paths.get(f["location_id"]), f["tag"], f["zone"], f["protection"], f["criticality"], f["status"], f["finding_type"],
+        ws.append([f["id"], paths.get(f["location_id"]), f["tag"], f["equipment_type"], f["equipment_location"], f["zone"], f["protection"], f["criticality"], f["status"], f["finding_type"],
                    f["description"], f["ot"], f["inspector"], f["inspected_at"], f["resolution"], f["closer"], f["closed_at"],
                    cnt.get((f["id"], "antes"), 0), cnt.get((f["id"], "despues"), 0)])
-    for col, wd in zip("ABCDEFGHIJKLMNOPQ", (6, 18, 18, 8, 12, 10, 12, 26, 60, 14, 20, 14, 50, 20, 13, 11, 13)):
+    for col, wd in zip("ABCDEFGHIJKLMNOPQRS", (6, 18, 18, 22, 32, 8, 12, 10, 12, 26, 60, 14, 20, 14, 50, 20, 13, 11, 13)):
         ws.column_dimensions[col].width = wd
     ws.freeze_panes = "A2"
     buf = io.BytesIO()
@@ -721,6 +731,13 @@ def read_finding(f, fd=None):
         tag, eqid, prot = (eq["tag"], eq["id"], eq["protection"]) if eq else ("", None, None)
     loc = f.get("location_id") or (str(eq["location_id"]) if eq and eq["location_id"] else "")
     zone = f.get("zone") or (eq["zone"] if eq else None)
+    generic_tag = tag.upper() in GENERIC_EQUIPMENT_TAGS
+    equipment_type = f.get("equipment_type", "").strip()
+    equipment_location = f.get("equipment_location", "").strip()
+    if generic_tag and equipment_type and equipment_type not in GENERIC_EQUIPMENT_TYPES:
+        return None, "Elegí un tipo de elemento válido."
+    if not generic_tag:
+        equipment_type, equipment_location = "", ""
     ft, other = f.get("finding_type", ""), f.get("other_text", "").strip()
     names = [t["name"] for t in types_list()]
     extra = fd["finding_type"] if fd and fd["finding_type"] and fd["finding_type"] not in names and fd["finding_type"] != OTHER else None
@@ -733,6 +750,7 @@ def read_finding(f, fd=None):
     if not (loc.isdigit() and zone in ZONES and f.get("criticality") in CRIT and desc and (ft == OTHER or ft in names or ft == extra)):
         return None, "Completá área, zona, criticidad y qué se encontró."
     return dict(loc=int(loc), tag=tag, eqid=eqid, zone=zone, prot=prot, crit=f["criticality"], desc=desc, ft=ft,
+                equipment_type=equipment_type or None, equipment_location=equipment_location or None,
                 date=dt(f.get("inspected_at")), ot=ot or None), None
 
 
@@ -742,9 +760,9 @@ def finding_create():
     v, e = read_finding(request.form)
     if e:
         return err(e)
-    r = run("INSERT INTO findings(location_id,tag,equipment_id,zone,protection,criticality,description,finding_type,inspector_id,inspector_name,inspected_at,ot)"
-            " VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id", v["loc"], v["tag"], v["eqid"], v["zone"], v["prot"], v["crit"], v["desc"],
-            v["ft"], session["uid"], session["name"], v["date"], v["ot"]).fetchone()
+    r = run("INSERT INTO findings(location_id,tag,equipment_id,zone,protection,criticality,description,finding_type,equipment_type,equipment_location,inspector_id,inspector_name,inspected_at,ot)"
+            " VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id", v["loc"], v["tag"], v["eqid"], v["zone"], v["prot"], v["crit"], v["desc"],
+            v["ft"], v["equipment_type"], v["equipment_location"], session["uid"], session["name"], v["date"], v["ot"]).fetchone()
     add_photos(r["id"], "antes")
     return jsonify(ok=True, id=r["id"])
 
@@ -768,8 +786,8 @@ def finding_update(fid):
     if e:
         return err(e)
     run("UPDATE findings SET location_id=%s, tag=%s, equipment_id=%s, zone=%s, protection=%s, criticality=%s, description=%s, finding_type=%s, "
-        "inspected_at=%s, ot=%s WHERE id=%s AND status='pendiente'", v["loc"], v["tag"], v["eqid"], v["zone"], v["prot"], v["crit"], v["desc"],
-        v["ft"], v["date"], v["ot"], fid)
+        "equipment_type=%s, equipment_location=%s, inspected_at=%s, ot=%s WHERE id=%s AND status='pendiente'", v["loc"], v["tag"], v["eqid"], v["zone"], v["prot"], v["crit"], v["desc"],
+        v["ft"], v["equipment_type"], v["equipment_location"], v["date"], v["ot"], fid)
     add_photos(fid, "antes")
     return jsonify(ok=True)
 
@@ -1152,6 +1170,8 @@ def finding_report_pdf(fid):
     data_rows = [
         [pdf_labeled("TAG / Identificación", finding.get("tag") or report_code(finding), styles["small"]),
          pdf_labeled("N° Orden de Trabajo (OT)", finding.get("ot") or "Sin OT asignada", styles["small"])],
+        [pdf_labeled("Tipo de elemento", finding.get("equipment_type"), styles["small"]),
+         pdf_labeled("Ubicación aproximada en planta", finding.get("equipment_location"), styles["small"])],
         [pdf_labeled("Área de Planta", finding.get("area"), styles["small"]),
          pdf_labeled("Zona Clasificada IEC", finding.get("zone"), styles["small"])],
         [pdf_labeled("Protección Ex", finding.get("protection"), styles["small"]),
