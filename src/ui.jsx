@@ -252,18 +252,20 @@ export const FindingCard = ({ f }) => {
   return (
     <article className={`it finding-card ${f.status === 'solucionado' ? 'solucionado' : f.crit}`}>
       <div className="finding-card-content">
-        <Link to={`/hallazgos/${f.id}`} className="finding-card-link">
-          <div className="l1">
+        <div className="finding-card-heading">
+          <Link to={`/hallazgos/${f.id}`} className="finding-card-heading-link">
             <b className="tag">{f.tag || `#${f.id}`}</b>
             <span><Pill kind={f.crit}>{f.crit}</Pill> <Pill kind={f.status}>{f.status}</Pill></span>
-          </div>
+          </Link>
+          <button type="button" className="btn l sm finding-preview-trigger" onClick={openPreview} disabled={preview.loading}>
+            {preview.loading ? 'Cargando…' : 'Previsualizar'}
+          </button>
+        </div>
+        <Link to={`/hallazgos/${f.id}`} className="finding-card-link">
           <div className="mu l2">{f.area} · Zona {f.zone}{f.protection ? ` · ${f.protection}` : ''}{f.ot ? ` · OT ${f.ot}` : ''}</div>
           <div>{f.description}</div>
           <div className="mu l2">{fmtDate(f.date)}{f.inspector ? ` · ${f.inspector}` : ''}</div>
         </Link>
-        <button type="button" className="btn l sm finding-preview-trigger" onClick={openPreview} disabled={preview.loading}>
-          {preview.loading ? 'Cargando…' : 'Previsualizar'}
-        </button>
         {preview.error && <p className="finding-preview-error" role="alert">{preview.error}</p>}
       </div>
       {photoIds.length

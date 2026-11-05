@@ -115,7 +115,9 @@ export default function Dashboard() {
                 </section>
               </div>
               <div className="section-heading urgent-heading"><div><span className="section-kicker">PARA SEGUIR</span><h2>Pendientes más urgentes</h2></div><Link to="/hallazgos?status=pendiente">Abrir listado <span aria-hidden="true">→</span></Link></div>
-              {d.urgent.length ? d.urgent.map((u) => <FindingCard key={u.id} f={{ ...u, status: 'pendiente' }} />) : <p className="empty-state">No hay hallazgos pendientes.</p>}
+              {d.urgent.length
+                ? <div className="dashboard-urgent-list">{d.urgent.map((u) => <FindingCard key={u.id} f={{ ...u, status: 'pendiente' }} />)}</div>
+                : <p className="empty-state">No hay hallazgos pendientes.</p>}
             </>
           )
         }}

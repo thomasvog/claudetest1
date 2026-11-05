@@ -414,9 +414,12 @@ th,td{border-color:var(--ln)}
 .topbar-brand img{width:120px;height:auto;max-height:none;object-position:center}
 .finding-card{display:flex;align-items:center;gap:12px}
 .finding-card-content{flex:1;min-width:0}
+.finding-card-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px}
+.finding-card-heading-link{display:flex;align-items:center;flex-wrap:wrap;gap:8px;min-width:0;color:var(--tx);text-decoration:none}
+.finding-card-heading-link:hover{color:var(--tx)}
 .finding-card-link{display:block;color:var(--tx);text-decoration:none;overflow-wrap:anywhere}
 .finding-card-link:hover{color:var(--tx)}
-.finding-preview-trigger{margin-top:8px}
+.finding-preview-trigger{flex:none;margin:0;white-space:nowrap}
 .finding-preview-error{margin:6px 0 0;color:var(--alta);font-size:12px}
 .finding-photo-button,.finding-photo-empty{position:relative;display:grid;place-items:center;flex:none;width:86px;height:66px;overflow:hidden;border:1px solid var(--ln);border-radius:6px;background:var(--bg);color:var(--mu)}
 .finding-photo-button{padding:0;cursor:pointer}
@@ -437,7 +440,7 @@ th,td{border-color:var(--ln)}
 .finding-preview-header{border-bottom:1px solid var(--ln)}
 .finding-preview-header>div{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
 .finding-preview-content{min-height:0;overflow:auto;padding:16px}
-.finding-preview-content dl{grid-template-columns:max-content minmax(0,1fr);gap:6px 14px}
+.finding-preview-content dl{grid-template-columns:max-content minmax(0,1fr);align-content:start;gap:6px 14px}
 .finding-preview-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
 .finding-preview-panel{min-width:0;padding:14px;border:1px solid var(--ln);border-radius:8px;background:var(--bg);font-size:13px}
 .finding-preview-data-panel{display:flex;flex-direction:column}
@@ -471,8 +474,8 @@ th,td{border-color:var(--ln)}
 	.topbar-brand img{width:96px}
 	.finding-card{gap:8px;padding:12px}
 	.finding-photo-button,.finding-photo-empty{width:64px;height:54px}
-	.finding-card .l1{align-items:flex-start}
-	.finding-card .l1>span{display:flex;flex-wrap:wrap;gap:4px}
+	.finding-card-heading{align-items:flex-start}
+	.finding-card-heading-link{gap:4px}
 	.stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 	.stat-card.blue .stat-detail{overflow-wrap:anywhere}
 	.photo-viewer-backdrop{padding:8px}
@@ -529,7 +532,7 @@ th,td{border-color:var(--ln)}
 .topbar .mobile-menu svg{width:20px;height:20px}
 .topbar .mobile-menu span{width:auto;height:auto;background:none;border-radius:0}
 .dashboard-page{width:100%;max-width:1400px;margin:0 auto;display:flex;flex-direction:column;gap:24px}
-.institution-card{margin:0;padding:36px;border:1px solid #94a3b82e;border-radius:22px;background:linear-gradient(145deg,#111a30 0%,#0d172b 100%);box-shadow:0 12px 35px #0003,inset 0 1px 0 #ffffff08}
+.institution-card{margin:0;padding:32px;border:1px solid #94a3b82e;border-radius:22px;background:linear-gradient(145deg,#111a30 0%,#0d172b 100%);box-shadow:0 12px 35px #0003,inset 0 1px 0 #ffffff08}
 .institution-meta{display:flex;align-items:center;gap:22px;min-height:50px}
 .institution-standard,.institution-scope{display:flex;flex-direction:column;gap:3px}
 .institution-standard{color:#f5b942;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:16px;letter-spacing:1px}
@@ -564,7 +567,7 @@ th,td{border-color:var(--ln)}
 	.topbar-quick-add svg{width:21px;height:21px}
 	.topbar .mobile-menu{min-width:80px;height:44px;gap:7px;padding-inline:12px;border-radius:12px;font-size:13px}
 	.topbar .mobile-menu svg{width:18px;height:18px}
-	.institution-card{padding:24px}
+	.institution-card{padding:20px}
 	.institution-meta{min-height:40px}
 	.institution-divider{height:40px}
 	.institution-card h1{margin:14px 0 8px;font-size:30px}
@@ -632,6 +635,8 @@ th,td{border-color:var(--ln)}
 .dashboard-area-list{flex:1}
 .dashboard-area-list .abar{margin:.35rem 0}
 .dashboard-page .urgent-heading{margin:0}
+.dashboard-urgent-list{display:flex;flex-direction:column;gap:9px}
+.dashboard-urgent-list .finding-card{margin-bottom:0}
 .dashboard-directory-link{display:flex;justify-content:flex-end;margin-top:auto;padding-top:16px}
 .dashboard-directory-link a{display:inline-flex;align-items:center;gap:8px;color:#cbd5e1;font-size:13px;font-weight:600;text-decoration:none}
 .dashboard-directory-link a:hover{color:#ff9900}
@@ -679,7 +684,7 @@ th,td{border-color:var(--ln)}
 	.topbar .mobile-menu span{display:none}
 	.page-content:has(.dashboard-page){padding:20px}
 	.dashboard-page{gap:24px}
-	.institution-card{padding:28px;border-radius:22px}
+	.institution-card{padding:24px;border-radius:22px}
 	.institution-meta{gap:14px}
 	.institution-standard{font-size:15px}
 	.institution-standard span,.institution-scope span{font-size:10px}
@@ -729,7 +734,7 @@ th,td{border-color:var(--ln)}
 	.topbar .mobile-menu{width:44px;min-width:44px;height:44px;padding:0}
 	.topbar .mobile-menu svg{width:18px;height:18px}
 	.page-content:has(.dashboard-page){padding-inline:16px}
-	.institution-card{padding:22px}
+	.institution-card{padding:20px}
 	.institution-actions.with-reports .institution-action{gap:6px;padding-inline:5px;font-size:12px}
 	.institution-actions.with-reports .institution-action svg{width:18px;height:18px}
 	.institution-meta{gap:10px}
