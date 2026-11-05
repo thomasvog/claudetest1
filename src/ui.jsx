@@ -191,10 +191,10 @@ function FindingPreview({ finding, onClose }) {
               <dl>
                 <dt>Área</dt><dd>{finding.area || '—'}</dd>
                 <dt>Zona</dt><dd>{finding.zone || '—'}{finding.protection ? ` · ${finding.protection}` : ''}</dd>
-                {finding.type && <><dt>Tipo</dt><dd>{finding.type}</dd></>}
                 {finding.equipmentType && <><dt>Tipo de elemento</dt><dd>{finding.equipmentType}</dd></>}
                 {finding.equipmentLocation && <><dt>Ubicación aproximada</dt><dd>{finding.equipmentLocation}</dd></>}
-                <dt>Inspección</dt><dd>{fmtDate(finding.date)}{finding.inspector ? ` · ${finding.inspector}` : ''}</dd>
+                <dt>Fecha de inspección</dt><dd>{fmtDate(finding.date) || '—'}</dd>
+                <dt>Ejecutor</dt><dd>{finding.inspector || '—'}</dd>
               </dl>
               <h4>Estado encontrado</h4>
               <p>{finding.description}</p>
@@ -204,7 +204,8 @@ function FindingPreview({ finding, onClose }) {
               {finding.status === 'solucionado' ? <>
                 <dl>
                   <dt>N° de OT</dt><dd>{finding.ot || 'Sin cargar'}</dd>
-                  <dt>Cierre</dt><dd>{fmtDate(finding.closedAt)}{finding.closer ? ` · ${finding.closer}` : ''}</dd>
+                  <dt>Fecha de cierre</dt><dd>{fmtDate(finding.closedAt) || '—'}</dd>
+                  <dt>Ejecutor</dt><dd>{finding.closer || '—'}</dd>
                 </dl>
                 <h4>Acción correctiva</h4>
                 <p>{finding.resolution || 'Sin descripción.'}</p>
@@ -213,12 +214,12 @@ function FindingPreview({ finding, onClose }) {
                 <p className="mu">Pendiente de reparación.</p>
               </>}
             </section>
-            <section className="finding-preview-panel finding-preview-photo-panel">
-              <h3>Fotos del antes</h3>
+            <section className="finding-preview-panel finding-preview-photo-panel finding-preview-photo-before">
+              <h3>Estado hallado</h3>
               {photoGroup('Estado encontrado', finding.photos.antes)}
             </section>
-            <section className="finding-preview-panel finding-preview-photo-panel">
-              <h3>Fotos del después</h3>
+            <section className="finding-preview-panel finding-preview-photo-panel finding-preview-photo-after">
+              <h3>Estado posterior a reparación</h3>
               {photoGroup('Estado después de la reparación', finding.photos.despues)}
             </section>
           </div>
