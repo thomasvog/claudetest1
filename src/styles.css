@@ -470,7 +470,7 @@ th,td{border-color:var(--ln)}
 @media(max-width:700px){
 	.topbar-brand img{width:120px}
 	.finding-preview-grid{grid-template-columns:1fr;gap:10px}
-	.finding-preview{max-height:95dvh}
+	.finding-preview{max-height:90dvh}
 }
 @media(max-width:460px){
 	.topbar-brand img{width:96px}
