@@ -470,6 +470,7 @@ th,td{border-color:var(--ln)}
 @media(max-width:700px){
 	.topbar-brand img{width:120px}
 	.finding-preview-grid{grid-template-columns:1fr;gap:10px}
+	.finding-preview{max-height:95dvh}
 }
 @media(max-width:460px){
 	.topbar-brand img{width:96px}
@@ -484,7 +485,6 @@ th,td{border-color:var(--ln)}
 	.photo-viewer-footer{justify-content:center}
 	.photo-viewer-footer .btn{flex:1 1 36%}
 	.finding-preview-backdrop{padding:8px}
-	.finding-preview{max-height:calc(100dvh - 16px)}
 	.finding-preview-content{padding:12px}
 	.finding-preview-content dl{grid-template-columns:1fr;gap:2px}
 	.finding-preview-content dd{margin-bottom:8px}
