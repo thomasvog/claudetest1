@@ -495,7 +495,7 @@ th,td{border-color:var(--ln)}
 .topbar .mobile-menu:active{transform:scale(.98)}
 .topbar .mobile-menu svg{width:20px;height:20px}
 .topbar .mobile-menu span{width:auto;height:auto;background:none;border-radius:0}
-.dashboard-page{width:100%;max-width:1400px;margin:0 auto;display:flex;flex-direction:column;gap:24px}
+.dashboard-page{width:100%;max-width:1400px;margin:0 auto;display:flex;flex-direction:column;gap:24px;zoom:.9}
 .institution-card{margin:0;padding:36px;border:1px solid #94a3b82e;border-radius:22px;background:linear-gradient(145deg,#111a30 0%,#0d172b 100%);box-shadow:0 12px 35px #0003,inset 0 1px 0 #ffffff08}
 .institution-meta{display:flex;align-items:center;gap:22px;min-height:50px}
 .institution-standard,.institution-scope{display:flex;flex-direction:column;gap:3px}
