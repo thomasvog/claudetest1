@@ -166,13 +166,12 @@ function FindingPreview({ finding, onClose }) {
     return () => document.removeEventListener('keydown', onKeyDown)
   }, [onClose])
 
-  const photoGroup = (title, ids) => ids.length > 0 && (
-    <section className="finding-preview-photos">
-      <h3>{title}</h3>
-      <div className="photos">
-        {ids.map((id) => <a key={id} href={`/api/photos/${id}`} target="_blank" rel="noreferrer"><img loading="lazy" src={`/api/photos/${id}`} alt={`${title} · foto ${id}`} /></a>)}
-      </div>
-    </section>
+  const photoGroup = (title, ids) => (
+    <div className="finding-preview-photos">
+      {ids.length
+        ? <div className="photos">{ids.map((id) => <a key={id} href={`/api/photos/${id}`} target="_blank" rel="noreferrer"><img loading="lazy" src={`/api/photos/${id}`} alt={`${title} · foto ${id}`} /></a>)}</div>
+        : <p className="mu">Sin fotos.</p>}
+    </div>
   )
 
   return createPortal(
@@ -198,18 +197,22 @@ function FindingPreview({ finding, onClose }) {
               <dt>Cierre</dt><dd>{fmtDate(finding.closedAt)}{finding.closer ? ` · ${finding.closer}` : ''}</dd>
             </>}
           </dl>
-          <section className="finding-preview-description">
-            <h3>Estado encontrado</h3>
-            <p>{finding.description}</p>
-          </section>
-          {photoGroup('Fotos del estado encontrado', finding.photos.antes)}
-          {finding.status === 'solucionado' && <>
-            <section className="finding-preview-description">
-              <h3>Estado después de la reparación</h3>
-              <p>{finding.resolution || 'Sin descripción.'}</p>
+          <div className="finding-preview-states">
+            <section className="finding-preview-state">
+              <h3>Estado encontrado</h3>
+              <p>{finding.description}</p>
+              <h4>Fotos del estado encontrado</h4>
+              {photoGroup('Estado encontrado', finding.photos.antes)}
             </section>
-            {photoGroup('Fotos después de la reparación', finding.photos.despues)}
-          </>}
+            <section className="finding-preview-state">
+              <h3>Estado después de la reparación</h3>
+              {finding.status === 'solucionado'
+                ? <p>{finding.resolution || 'Sin descripción.'}</p>
+                : <p className="mu">Pendiente de reparación.</p>}
+              <h4>Fotos después de la reparación</h4>
+              {photoGroup('Estado después de la reparación', finding.photos.despues)}
+            </section>
+          </div>
         </div>
         <footer className="finding-preview-footer">
           <Link className="btn y sm" to={`/hallazgos/${finding.id}`} onClick={onClose}>Abrir detalle completo</Link>
