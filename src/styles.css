@@ -346,7 +346,8 @@ th,td{border-color:var(--ln)}
 .tile b{color:var(--tx)}
 .tr{background:#ffffff12}
 .it{background:var(--pa);border-color:var(--ln);box-shadow:0 5px 16px #00000012}
-.it:hover{border-color:#52617d;box-shadow:0 9px 22px #00000024}
+.it.baja{border-left-color:var(--baja)}
+.it:hover{border-top-color:#52617d;border-right-color:#52617d;border-bottom-color:#52617d;box-shadow:0 9px 22px #00000024}
 .photos img,.thm img{border-color:var(--ln)}
 .box{background:var(--in);border-color:var(--ln)}
 .ck{border-color:var(--ln)}
