@@ -31,6 +31,16 @@ Conviene crear un repositorio y un proyecto de Vercel **nuevos**, y dejar el ant
 5. **Deploy:** presionar *Deploy*. Después de agregar o modificar variables en un proyecto ya desplegado, usar *Deployments* › menú ⋯ del último despliegue › *Redeploy*.
 6. Abrir la URL del proyecto e ingresar con los usuarios que ya existen.
 
+## Instalar en celular o computadora
+
+La app se puede instalar desde su URL de Vercel, siempre que se abra por HTTPS:
+
+- **Android:** abrir la app en Chrome y elegir *Instalar aplicación* o *Agregar a pantalla principal* en el menú.
+- **iPhone/iPad:** abrirla en Safari, tocar *Compartir* y elegir *Agregar a pantalla de inicio*.
+- **Computadora:** abrirla en Chrome o Edge y usar el botón de instalación de la barra de direcciones, o *Instalar esta aplicación* en el menú.
+
+La instalación crea un acceso directo que abre la app en una ventana propia. Se necesita conexión a internet para iniciar sesión y usar las funciones; no se guardan datos ni respuestas de la API para uso sin conexión. Tras publicar una nueva versión, cerrar y volver a abrir la app instalada para cargarla.
+
 Si se usa una base de Neon **nueva y vacía**, `SETUP_KEY` debe estar definido. La primera vez, la aplicación pide ese código para crear el administrador.
 
 ## Qué hace la API
