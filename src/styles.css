@@ -60,7 +60,7 @@ dl{display:grid;grid-template-columns:max-content 1fr;gap:.35rem 1.1rem;margin:0
 /* hallazgos */
 .it{display:block;text-decoration:none;color:var(--tx);background:var(--pa);border:1px solid var(--ln);border-left:6px solid var(--baja);border-radius:12px;padding:.75rem .9rem;margin-bottom:.65rem}
 .it.alta{border-left-color:var(--alta)}.it.media{border-left-color:var(--media)}.it.solucionado{border-left-color:var(--mu);opacity:.85}
-.it:hover{border-color:var(--ib)}.it .l1{display:flex;flex-wrap:wrap;gap:.3rem .7rem;align-items:center;justify-content:space-between}.it .l2{margin-top:.2rem}
+.it:hover{border-top-color:var(--ib);border-right-color:var(--ib);border-bottom-color:var(--ib)}.it .l1{display:flex;flex-wrap:wrap;gap:.3rem .7rem;align-items:center;justify-content:space-between}.it .l2{margin-top:.2rem}
 
 /* fotos */
 .photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:.6rem;margin:.5rem 0}
@@ -167,7 +167,7 @@ dt{font-weight:600}
 .tr i{border-radius:99px}
 .it{position:relative;padding:15px 17px;margin-bottom:9px;border:1px solid var(--ln);border-left:3px solid var(--baja);border-radius:5px;box-shadow:0 3px 12px #18372d06;transition:transform .15s ease,border-color .15s ease,box-shadow .15s ease}
 .it.alta{border-left-color:var(--alta)}.it.media{border-left-color:var(--media)}.it.solucionado{border-left-color:var(--mu);opacity:.88}
-.it:hover{border-color:var(--ib);transform:translateY(-1px);box-shadow:0 7px 18px #18372d10}
+.it:hover{border-top-color:var(--ib);border-right-color:var(--ib);border-bottom-color:var(--ib);transform:translateY(-1px);box-shadow:0 7px 18px #18372d10}
 .it .l1{gap:8px 12px}.it .l2{font-size:11px}
 .tag{font-size:.92em}
 .photos{gap:10px;margin:.75rem 0}
@@ -797,7 +797,7 @@ th,td{border-color:var(--ln)}
 :root[data-theme="light"] .attention-card.clear .attention-count{color:#126a46}
 :root[data-theme="light"] .empty-state{border-color:var(--ln);background:#fff;color:var(--mu)}
 :root[data-theme="light"] .it{background:#fff;border-color:var(--ln);box-shadow:0 3px 10px #24364d0d}
-:root[data-theme="light"] .it:hover{border-color:#becbd9;box-shadow:0 6px 16px #24364d14}
+:root[data-theme="light"] .it:hover{border-top-color:#becbd9;border-right-color:#becbd9;border-bottom-color:#becbd9;box-shadow:0 6px 16px #24364d14}
 :root[data-theme="light"] .scroll{background:#fff;border-color:var(--ln);box-shadow:0 4px 12px #24364d0d}
 :root[data-theme="light"] th{background:#f2f5f8;color:#64758c}
 :root[data-theme="light"] tbody tr:hover{background:#f7f9fb}
