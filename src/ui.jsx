@@ -185,31 +185,40 @@ function FindingPreview({ finding, onClose }) {
           <button type="button" className="btn l sm" onClick={onClose} aria-label="Cerrar previsualización">Cerrar ×</button>
         </header>
         <div className="finding-preview-content">
-          <dl>
-            <dt>Área</dt><dd>{finding.area || '—'}</dd>
-            <dt>Zona</dt><dd>{finding.zone || '—'}{finding.protection ? ` · ${finding.protection}` : ''}</dd>
-            {finding.type && <><dt>Tipo</dt><dd>{finding.type}</dd></>}
-            {finding.equipmentType && <><dt>Tipo de elemento</dt><dd>{finding.equipmentType}</dd></>}
-            {finding.equipmentLocation && <><dt>Ubicación aproximada</dt><dd>{finding.equipmentLocation}</dd></>}
-            <dt>N° de OT</dt><dd>{finding.ot || 'Sin cargar'}</dd>
-            <dt>Inspección</dt><dd>{fmtDate(finding.date)}{finding.inspector ? ` · ${finding.inspector}` : ''}</dd>
-            {finding.status === 'solucionado' && <>
-              <dt>Cierre</dt><dd>{fmtDate(finding.closedAt)}{finding.closer ? ` · ${finding.closer}` : ''}</dd>
-            </>}
-          </dl>
-          <div className="finding-preview-states">
-            <section className="finding-preview-state">
-              <h3>Estado encontrado</h3>
+          <div className="finding-preview-grid">
+            <section className="finding-preview-panel">
+              <h3>Datos del hallazgo</h3>
+              <dl>
+                <dt>Área</dt><dd>{finding.area || '—'}</dd>
+                <dt>Zona</dt><dd>{finding.zone || '—'}{finding.protection ? ` · ${finding.protection}` : ''}</dd>
+                {finding.type && <><dt>Tipo</dt><dd>{finding.type}</dd></>}
+                {finding.equipmentType && <><dt>Tipo de elemento</dt><dd>{finding.equipmentType}</dd></>}
+                {finding.equipmentLocation && <><dt>Ubicación aproximada</dt><dd>{finding.equipmentLocation}</dd></>}
+                <dt>Inspección</dt><dd>{fmtDate(finding.date)}{finding.inspector ? ` · ${finding.inspector}` : ''}</dd>
+              </dl>
+              <h4>Estado encontrado</h4>
               <p>{finding.description}</p>
-              <h4>Fotos del estado encontrado</h4>
+            </section>
+            <section className="finding-preview-panel">
+              <h3>Datos de la reparación</h3>
+              {finding.status === 'solucionado' ? <>
+                <dl>
+                  <dt>N° de OT</dt><dd>{finding.ot || 'Sin cargar'}</dd>
+                  <dt>Cierre</dt><dd>{fmtDate(finding.closedAt)}{finding.closer ? ` · ${finding.closer}` : ''}</dd>
+                </dl>
+                <h4>Acción correctiva</h4>
+                <p>{finding.resolution || 'Sin descripción.'}</p>
+              </> : <>
+                <dl><dt>N° de OT</dt><dd>{finding.ot || 'Sin cargar'}</dd></dl>
+                <p className="mu">Pendiente de reparación.</p>
+              </>}
+            </section>
+            <section className="finding-preview-panel finding-preview-photo-panel">
+              <h3>Fotos del antes</h3>
               {photoGroup('Estado encontrado', finding.photos.antes)}
             </section>
-            <section className="finding-preview-state">
-              <h3>Estado después de la reparación</h3>
-              {finding.status === 'solucionado'
-                ? <p>{finding.resolution || 'Sin descripción.'}</p>
-                : <p className="mu">Pendiente de reparación.</p>}
-              <h4>Fotos después de la reparación</h4>
+            <section className="finding-preview-panel finding-preview-photo-panel">
+              <h3>Fotos del después</h3>
               {photoGroup('Estado después de la reparación', finding.photos.despues)}
             </section>
           </div>
