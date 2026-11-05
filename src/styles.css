@@ -413,8 +413,11 @@ th,td{border-color:var(--ln)}
 .auth-brand img{width:82px;height:auto}
 .topbar-brand img{width:120px;height:auto;max-height:none;object-position:center}
 .finding-card{display:flex;align-items:center;gap:12px}
-.finding-card-link{flex:1;min-width:0;color:var(--tx);text-decoration:none;overflow-wrap:anywhere}
+.finding-card-content{flex:1;min-width:0}
+.finding-card-link{display:block;color:var(--tx);text-decoration:none;overflow-wrap:anywhere}
 .finding-card-link:hover{color:var(--tx)}
+.finding-preview-trigger{margin-top:8px}
+.finding-preview-error{margin:6px 0 0;color:var(--alta);font-size:12px}
 .finding-photo-button,.finding-photo-empty{position:relative;display:grid;place-items:center;flex:none;width:86px;height:66px;overflow:hidden;border:1px solid var(--ln);border-radius:6px;background:var(--bg);color:var(--mu)}
 .finding-photo-button{padding:0;cursor:pointer}
 .finding-photo-button img{width:100%;height:100%;object-fit:cover;display:block}
@@ -428,6 +431,20 @@ th,td{border-color:var(--ln)}
 .photo-viewer-image{min-height:160px;flex:1;display:grid;place-items:center;overflow:auto;padding:10px}
 .photo-viewer-image img{display:block;max-width:100%;max-height:calc(100dvh - 190px);object-fit:contain}
 .photo-viewer-footer{flex-wrap:wrap;border-top:1px solid var(--ln);font-size:11px}
+.finding-preview-backdrop{position:fixed;inset:0;z-index:100;display:grid;place-items:center;padding:18px;background:#030611d9}
+.finding-preview{width:min(760px,100%);max-height:calc(100dvh - 36px);display:grid;grid-template-rows:auto minmax(0,1fr) auto;border:1px solid var(--ln);border-radius:10px;background:var(--pa);box-shadow:0 20px 70px #0009;overflow:hidden}
+.finding-preview-header,.finding-preview-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px}
+.finding-preview-header{border-bottom:1px solid var(--ln)}
+.finding-preview-header>div{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.finding-preview-content{min-height:0;overflow:auto;padding:16px}
+.finding-preview-content dl{grid-template-columns:max-content minmax(0,1fr);gap:6px 14px}
+.finding-preview-description{margin-top:16px}
+.finding-preview-description h3,.finding-preview-photos h3{margin:0 0 6px}
+.finding-preview-description p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.finding-preview-photos{margin-top:16px}
+.finding-preview-photos .photos{grid-template-columns:repeat(auto-fill,minmax(120px,1fr))}
+.finding-preview-photos .photos a{display:block}
+.finding-preview-footer{flex-wrap:wrap;border-top:1px solid var(--ln)}
 .report-preview-backdrop{position:fixed;inset:0;z-index:100;display:grid;place-items:center;padding:18px;background:#030611d9}
 .report-preview{width:min(1100px,100%);height:calc(100dvh - 36px);min-height:240px;display:grid;grid-template-rows:auto minmax(0,1fr) auto;border:1px solid var(--ln);border-radius:10px;background:var(--pa);box-shadow:0 20px 70px #0009;overflow:hidden}
 .report-preview-header,.report-preview-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px}
@@ -454,6 +471,13 @@ th,td{border-color:var(--ln)}
 	.photo-viewer{max-height:calc(100dvh - 16px)}
 	.photo-viewer-footer{justify-content:center}
 	.photo-viewer-footer .btn{flex:1 1 36%}
+	.finding-preview-backdrop{padding:8px}
+	.finding-preview{max-height:calc(100dvh - 16px)}
+	.finding-preview-content{padding:12px}
+	.finding-preview-content dl{grid-template-columns:1fr;gap:2px}
+	.finding-preview-content dd{margin-bottom:8px}
+	.finding-preview-footer{justify-content:center}
+	.finding-preview-footer .btn{flex:1 1 36%}
 	.report-preview-backdrop{padding:8px}
 	.report-preview{height:calc(100dvh - 16px);min-height:200px}
 	.report-preview-footer{justify-content:center}
@@ -585,6 +609,7 @@ th,td{border-color:var(--ln)}
 .criticality-card.alta>span{color:#ff6b91}
 .criticality-card.media>span{color:#f5b942}
 .criticality-card.baja>span{color:#35d9ae}
+.criticality-card>span{font-weight:700}
 .criticality-card b{font-size:34px;line-height:1.1}
 .criticality-card.alta b{color:#f45b83}
 .criticality-card.media b{color:#f5b942}

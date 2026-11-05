@@ -1,6 +1,7 @@
 import { Children, cloneElement, isValidElement, useCallback, useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
+import { api } from './api.js'
 
 export const RANK = { tecnico: 1, supervisor: 2, admin: 3 }
 export const fmtDate = (s) => (s ? s.split('-').reverse().join('/') : '')
@@ -156,22 +157,102 @@ function FindingPhotoViewer({ f, ids, index, setIndex, onClose }) {
   )
 }
 
+function FindingPreview({ finding, onClose }) {
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [onClose])
+
+  const photoGroup = (title, ids) => ids.length > 0 && (
+    <section className="finding-preview-photos">
+      <h3>{title}</h3>
+      <div className="photos">
+        {ids.map((id) => <a key={id} href={`/api/photos/${id}`} target="_blank" rel="noreferrer"><img loading="lazy" src={`/api/photos/${id}`} alt={`${title} · foto ${id}`} /></a>)}
+      </div>
+    </section>
+  )
+
+  return createPortal(
+    <div className="finding-preview-backdrop" onClick={(event) => { if (event.target === event.currentTarget) onClose() }}>
+      <section className="finding-preview" role="dialog" aria-modal="true" aria-label={`Previsualización del hallazgo ${finding.tag || finding.id}`}>
+        <header className="finding-preview-header">
+          <div>
+            <b className="tag">{finding.tag || `Hallazgo #${finding.id}`}</b>
+            <span><Pill kind={finding.crit}>{finding.crit}</Pill> <Pill kind={finding.status}>{finding.status}</Pill></span>
+          </div>
+          <button type="button" className="btn l sm" onClick={onClose} aria-label="Cerrar previsualización">Cerrar ×</button>
+        </header>
+        <div className="finding-preview-content">
+          <dl>
+            <dt>Área</dt><dd>{finding.area || '—'}</dd>
+            <dt>Zona</dt><dd>{finding.zone || '—'}{finding.protection ? ` · ${finding.protection}` : ''}</dd>
+            {finding.type && <><dt>Tipo</dt><dd>{finding.type}</dd></>}
+            {finding.equipmentType && <><dt>Tipo de elemento</dt><dd>{finding.equipmentType}</dd></>}
+            {finding.equipmentLocation && <><dt>Ubicación aproximada</dt><dd>{finding.equipmentLocation}</dd></>}
+            <dt>N° de OT</dt><dd>{finding.ot || 'Sin cargar'}</dd>
+            <dt>Inspección</dt><dd>{fmtDate(finding.date)}{finding.inspector ? ` · ${finding.inspector}` : ''}</dd>
+            {finding.status === 'solucionado' && <>
+              <dt>Cierre</dt><dd>{fmtDate(finding.closedAt)}{finding.closer ? ` · ${finding.closer}` : ''}</dd>
+            </>}
+          </dl>
+          <section className="finding-preview-description">
+            <h3>Estado encontrado</h3>
+            <p>{finding.description}</p>
+          </section>
+          {photoGroup('Fotos del estado encontrado', finding.photos.antes)}
+          {finding.status === 'solucionado' && <>
+            <section className="finding-preview-description">
+              <h3>Estado después de la reparación</h3>
+              <p>{finding.resolution || 'Sin descripción.'}</p>
+            </section>
+            {photoGroup('Fotos después de la reparación', finding.photos.despues)}
+          </>}
+        </div>
+        <footer className="finding-preview-footer">
+          <Link className="btn y sm" to={`/hallazgos/${finding.id}`} onClick={onClose}>Abrir detalle completo</Link>
+          <button type="button" className="btn l sm" onClick={onClose}>Cerrar</button>
+        </footer>
+      </section>
+    </div>,
+    document.body
+  )
+}
+
 export const FindingCard = ({ f }) => {
   const [photoIndex, setPhotoIndex] = useState(null)
   const [photoError, setPhotoError] = useState(false)
+  const [preview, setPreview] = useState({ loading: false, finding: null, error: '' })
   const photoIds = f.photoIds || []
   useEffect(() => { setPhotoError(false) }, [photoIds[0]])
+  const openPreview = async () => {
+    setPreview({ loading: true, finding: null, error: '' })
+    try {
+      const finding = await api.get(`/api/findings/${f.id}`)
+      setPreview({ loading: false, finding, error: '' })
+    } catch (error) {
+      setPreview({ loading: false, finding: null, error: error.message })
+    }
+  }
   return (
     <article className={`it finding-card ${f.status === 'solucionado' ? 'solucionado' : f.crit}`}>
-      <Link to={`/hallazgos/${f.id}`} className="finding-card-link">
-        <div className="l1">
-          <b className="tag">{f.tag || `#${f.id}`}</b>
-          <span><Pill kind={f.crit}>{f.crit}</Pill> <Pill kind={f.status}>{f.status}</Pill></span>
-        </div>
-        <div className="mu l2">{f.area} · Zona {f.zone}{f.protection ? ` · ${f.protection}` : ''}{f.ot ? ` · OT ${f.ot}` : ''}</div>
-        <div>{f.description}</div>
-        <div className="mu l2">{fmtDate(f.date)}{f.inspector ? ` · ${f.inspector}` : ''}</div>
-      </Link>
+      <div className="finding-card-content">
+        <Link to={`/hallazgos/${f.id}`} className="finding-card-link">
+          <div className="l1">
+            <b className="tag">{f.tag || `#${f.id}`}</b>
+            <span><Pill kind={f.crit}>{f.crit}</Pill> <Pill kind={f.status}>{f.status}</Pill></span>
+          </div>
+          <div className="mu l2">{f.area} · Zona {f.zone}{f.protection ? ` · ${f.protection}` : ''}{f.ot ? ` · OT ${f.ot}` : ''}</div>
+          <div>{f.description}</div>
+          <div className="mu l2">{fmtDate(f.date)}{f.inspector ? ` · ${f.inspector}` : ''}</div>
+        </Link>
+        <button type="button" className="btn l sm finding-preview-trigger" onClick={openPreview} disabled={preview.loading}>
+          {preview.loading ? 'Cargando…' : 'Previsualizar'}
+        </button>
+        {preview.error && <p className="finding-preview-error" role="alert">{preview.error}</p>}
+      </div>
       {photoIds.length
         ? <button type="button" className="finding-photo-button" onClick={() => setPhotoIndex(0)} aria-label={`Ver fotografías del hallazgo ${f.tag || f.id}`}>
             {photoError
@@ -181,6 +262,7 @@ export const FindingCard = ({ f }) => {
           </button>
         : <span className="finding-photo-empty" aria-label="Sin fotografías"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="8.5" cy="9" r="1.5" /><path d="m21 15-5-5L5 20" /></svg></span>}
       {photoIndex !== null && <FindingPhotoViewer f={f} ids={photoIds} index={photoIndex} setIndex={setPhotoIndex} onClose={() => setPhotoIndex(null)} />}
+      {preview.finding && <FindingPreview finding={preview.finding} onClose={() => setPreview({ loading: false, finding: null, error: '' })} />}
     </article>
   )
 }
