@@ -853,6 +853,7 @@ th,td{border-color:var(--ln)}
 :root[data-theme="light"] .auth-form .card{box-shadow:0 8px 24px #24364d12}
 :root[data-theme="light"] .theme-button{background:#fff;border-color:var(--ln);color:var(--tx)}
 :root[data-theme="light"] .btn{color:#1b1500}
+:root[data-theme="light"] .findings-search-button{color:#000}
 :root[data-theme="light"] .btn.g{color:#fff}
 :root[data-theme="light"] .btn.d{color:#fff}
 :root[data-theme="light"] .btn.l{color:var(--tx)}
@@ -860,6 +861,7 @@ th,td{border-color:var(--ln)}
 :root[data-theme="light"] .btn.y,:root[data-theme="light"] .institution-action-primary{color:#231503}
 :root[data-theme="light"] form.card .btn.l{color:var(--tx)}
 :root[data-theme="light"] form.card .btn.y{color:#231503}
+.findings-search-button{color:#000}
 :root[data-theme="light"] .thm button{background:#f3f6f9;color:#34445b;border:1px solid var(--ln)}
 :root[data-theme="light"] .overdue-alert-action{background:#a73555;color:#fff}
 :root[data-theme="light"] .pill.pendiente{color:#a72b4d;border-color:#c8104f}

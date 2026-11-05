@@ -30,7 +30,7 @@ export default function Findings() {
         </div>
         <label className="chk"><input type="checkbox" checked={!!p.overdue} onChange={(e) => set('overdue', e.target.checked ? '1' : '')} /> Solo pendientes con más de 30 días</label>
         <div className="btns">
-          <button className="btn">Buscar</button>
+          <button className="btn findings-search-button">Buscar</button>
           <button type="button" className="btn l" onClick={() => setSp({}, { replace: true })}>Limpiar</button>
           <a className="btn y" href={`/api/findings/export.xlsx${q}`}>Exportar a Excel</a>
         </div>
