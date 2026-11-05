@@ -514,7 +514,7 @@ th,td{border-color:var(--ln)}
 .institution-action svg{width:21px;height:21px;flex:none}
 .institution-action[href="/informes"] svg{color:#f45b83}
 .institution-action[href="/api/findings/export.xlsx"] svg{color:#10c995}
-.institution-action-primary{grid-column:1/-1;min-height:66px;background:#ff9900;color:#101827;box-shadow:0 5px 16px #ff990022}
+.institution-action-primary{grid-column:1/-1;min-height:66px;background:#ff9900;color:#101827;font-weight:700;box-shadow:0 5px 16px #ff990022}
 .institution-action-primary:hover{background:#ffaa22}
 .institution-action-primary svg{color:#101827}
 @media(min-width:1051px){
