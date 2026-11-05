@@ -186,7 +186,7 @@ function FindingPreview({ finding, onClose }) {
         </header>
         <div className="finding-preview-content">
           <div className="finding-preview-grid">
-            <section className="finding-preview-panel">
+            <section className="finding-preview-panel finding-preview-data-panel">
               <h3>Datos del hallazgo</h3>
               <dl>
                 <dt>Área</dt><dd>{finding.area || '—'}</dd>
@@ -199,7 +199,7 @@ function FindingPreview({ finding, onClose }) {
               <h4>Estado encontrado</h4>
               <p>{finding.description}</p>
             </section>
-            <section className="finding-preview-panel">
+            <section className="finding-preview-panel finding-preview-data-panel">
               <h3>Datos de la reparación</h3>
               {finding.status === 'solucionado' ? <>
                 <dl>

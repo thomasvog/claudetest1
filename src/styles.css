@@ -115,7 +115,7 @@ a{color:var(--lk)}
 .topbar-cta{margin-left:auto;min-height:38px;font-size:12px}
 .topbar-cta span{font-size:18px;line-height:1}
 .mobile-menu{display:none}
-.page-content{width:min(100%,1400px);max-width:1400px;margin:0 auto;padding:34px clamp(20px,4vw,48px) 56px}
+.page-content{width:min(100%,1400px);max-width:1400px;margin:0 auto;padding:34px clamp(20px,4vw,48px) 56px;zoom:.9}
 h1{font-size:1.9rem;font-weight:750;letter-spacing:0;margin:.15rem 0 1.35rem;line-height:1.25}
 h1 small{font-size:.58em;color:var(--mu);vertical-align:middle}
 h2{font-size:1.05rem;font-weight:750;margin:0 0 .85rem}
@@ -439,11 +439,12 @@ th,td{border-color:var(--ln)}
 .finding-preview-content{min-height:0;overflow:auto;padding:16px}
 .finding-preview-content dl{grid-template-columns:max-content minmax(0,1fr);gap:6px 14px}
 .finding-preview-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
-.finding-preview-panel{min-width:0;padding:14px;border:1px solid var(--ln);border-radius:8px;background:var(--bg)}
+.finding-preview-panel{min-width:0;padding:14px;border:1px solid var(--ln);border-radius:8px;background:var(--bg);font-size:13px}
+.finding-preview-data-panel{display:flex;flex-direction:column}
 .finding-preview-panel h3,.finding-preview-panel h4{margin:0 0 8px}
 .finding-preview-panel h4{margin-top:16px;font-size:13px}
 .finding-preview-panel>p{margin:0;font-size:inherit;white-space:pre-wrap;overflow-wrap:anywhere}
-.finding-preview-panel dl{margin:0 0 14px}
+.finding-preview-data-panel dl{flex:1;margin:0 0 14px}
 .finding-preview-photo-panel{min-height:180px}
 .finding-preview-photo-before h3{color:#f45b83}
 .finding-preview-photo-after h3{color:#10c995}
@@ -527,7 +528,7 @@ th,td{border-color:var(--ln)}
 .topbar .mobile-menu:active{transform:scale(.98)}
 .topbar .mobile-menu svg{width:20px;height:20px}
 .topbar .mobile-menu span{width:auto;height:auto;background:none;border-radius:0}
-.dashboard-page{width:100%;max-width:1400px;margin:0 auto;display:flex;flex-direction:column;gap:24px;zoom:.9}
+.dashboard-page{width:100%;max-width:1400px;margin:0 auto;display:flex;flex-direction:column;gap:24px}
 .institution-card{margin:0;padding:36px;border:1px solid #94a3b82e;border-radius:22px;background:linear-gradient(145deg,#111a30 0%,#0d172b 100%);box-shadow:0 12px 35px #0003,inset 0 1px 0 #ffffff08}
 .institution-meta{display:flex;align-items:center;gap:22px;min-height:50px}
 .institution-standard,.institution-scope{display:flex;flex-direction:column;gap:3px}
