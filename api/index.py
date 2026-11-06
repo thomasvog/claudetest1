@@ -48,6 +48,7 @@ app.json = Provider(app)
 app.config.update(
     SECRET_KEY=os.environ.get("SECRET_KEY") or hashlib.sha256(("hazloc|" + URL).encode()).hexdigest(),
     MAX_CONTENT_LENGTH=4 * 1024 * 1024,  # Vercel admite ~4,5 MB por request
+    PERMANENT_SESSION_LIFETIME=timedelta(minutes=15),
     SESSION_COOKIE_SAMESITE="Lax",
     SESSION_COOKIE_SECURE=bool(os.environ.get("VERCEL")),
 )
@@ -519,6 +520,7 @@ def login():
     if u and u["active"] and check_password_hash(u["pw"], str(f.get("password", ""))):
         run("DELETE FROM attempts WHERE username=%s", un)
         session.clear()
+        session.permanent = True
         session.update(uid=u["id"], name=u["name"], role=u["role"], csrf=secrets.token_hex(16))
         return jsonify(user=user_json(), csrf=session["csrf"])
     run("INSERT INTO attempts(username) VALUES(%s)", un)

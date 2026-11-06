@@ -47,7 +47,7 @@ Si se usa una base de Neon **nueva y vacía**, `SETUP_KEY` debe estar definido. 
 
 Todas las rutas empiezan con `/api/`. Las que modifican datos exigen el encabezado `X-CSRF-Token` (el frontend lo envía solo) y una sesión iniciada.
 
-- Sesión: `GET /me`, `POST /login`, `POST /logout`, `POST /setup`, `POST /password`.
+- Sesión: `GET /me`, `POST /login`, `POST /logout`, `POST /setup`, `POST /password`. Al iniciar sesión, la cookie persiste durante 15 minutos desde la última actividad, incluso si se cierra la app.
 - Resumen: `GET /dashboard`.
 - Hallazgos: `GET/POST /findings`, `GET/PUT /findings/<id>`, `DELETE /findings/<id>` (solo administrador), `POST /findings/<id>/close|repair|reopen|photos`, `DELETE /findings/<id>/photos/<foto>`, `GET /findings/export.xlsx`, `GET /photos/<foto>`.
 - Tags: `GET/POST /equipment`, `PUT/DELETE /equipment/<id>`, `POST /equipment/import`, `GET /equipment/template.xlsx`.
